@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 
 type Bindings = {
+  ASSETS: { fetch: typeof fetch }
   DB: D1Database
   MY_BUCKET: R2Bucket
 }

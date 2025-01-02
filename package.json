@@ -1,11 +1,13 @@
 {
   "name": "cf-drop",
   "scripts": {
+    "prepare": "npm run build",
     "dev:cf": "wrangler dev",
     "dev:web": "cd web && npm run dev",
     "dev": "run-p -l dev:*",
     "build": "cd web && npm run build",
-    "deploy": "wrangler deploy --minify"
+    "deploy": "run-s build deploy:*",
+    "deploy:cf": "wrangler deploy --minify"
   },
   "engines": {
     "node": ">=20"
