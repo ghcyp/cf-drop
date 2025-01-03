@@ -25,7 +25,6 @@ app.get("/api/list", async (c) => {
   // const r = await createUploadRecord(c.env.DB, {
   //   uploader: 'yon',
   //   size: 0,
-  //   thumbnail: null,
   //   files: '',
   //   message: '',
   // })
@@ -64,7 +63,6 @@ app.post("/api/upload", async (c) => {
   const record = await createUploadRecord(c.env.DB, {
     uploader,
     size: uploadedFiles.reduce((acc, file) => acc + file.size, 0),
-    thumbnail: "", // uploadedFiles[0]?.path,
     files: JSON.stringify(uploadedFiles),
     message,
   });

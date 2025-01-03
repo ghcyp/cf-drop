@@ -4,6 +4,9 @@ import { UnoCSSRspackPlugin } from '@unocss/webpack/rspack';
 import unoConfig from './uno.config';
 
 export default defineConfig({
+  html: {
+    title: 'cf-drop'
+  },
   plugins: [pluginReact()],
   tools: {
     rspack(config, ctx) {

@@ -6,7 +6,6 @@ export async function migrateTables(db: D1Database) {
       uploader TEXT NOT NULL,
       ctime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       size INTEGER DEFAULT 0,
-      thumbnail TEXT NULL,
       files TEXT DEFAULT '',
       message TEXT DEFAULT ''
     )
@@ -19,7 +18,6 @@ export interface UploadRecord {
   uploader: string;
   ctime: Date;
   size: number;
-  thumbnail: string | null;
   files: string; // JSON string of [{ name, size, path }]
   message: string;
 }
@@ -48,7 +46,6 @@ export async function getUploadRecords(
       uploader: row.uploader,
       ctime: new Date(row.ctime),
       size: row.size,
-      thumbnail: row.thumbnail,
       files: row.files,
       message: row.message,
     });
@@ -62,12 +59,11 @@ export async function createUploadRecord(
 ) {
   const res = await db
     .prepare(
-      "INSERT INTO upload_record (uploader, size, thumbnail, files, message) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO upload_record (uploader, size, files, message) VALUES (?, ?, ?, ?)"
     )
     .bind(
       record.uploader,
       record.size,
-      record.thumbnail,
       record.files,
       record.message
     )

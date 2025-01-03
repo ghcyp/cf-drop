@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -6,4 +7,27 @@ html, body {
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  border: 0;
+}
+
+button {
+  position: relative;
+  cursor: pointer;
+}
+button:not(:disabled)::after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 16px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #fff1 60%, #fff0);
 }

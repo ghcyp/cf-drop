@@ -1,30 +1,46 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import { useConsistCallback } from '../hooks/useConsistCallback';
 
 interface Props {
   onTextChange?: (text: string) => void;
   onFilesChange?: (files: File[]) => void;
-  onSend?: (text: string, files: File[]) => void;
+  onSend?: (text: string, files: File[]) => Promise<any>;
 }
 
 export const ContentInput = memo<Props>((props) => {
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState('');
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    // Handle pasted text
-    const pastedText = e.clipboardData.getData('text');
-    if (pastedText) {
-      setText(pastedText);
-      props.onTextChange?.(pastedText);
-    }
+  const handleFilesChange = useConsistCallback((cb: (files: File[]) => File[]) => {
+    let files: File[];
+    setFiles((oldFiles) => {
+      files = cb(oldFiles.slice());
+      return files;
+    });
 
-    // Handle pasted files
-    const pastedFiles = Array.from(e.clipboardData.files);
-    if (pastedFiles.length) {
-      setFiles((prev) => [...prev, ...pastedFiles]);
-      props.onFilesChange?.([...files, ...pastedFiles]);
-    }
-  };
+    setTimeout(() => {
+      props.onFilesChange?.(files);
+      const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+      if (totalSize > 0 && totalSize < 10e6 && !text) {
+        // Send if files are uploaded and total size is less than 10MB
+        Promise.resolve(props.onSend?.(text, files)).then(() => {
+          setFiles([]);
+        });
+      }
+    }, 0);
+  });
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Handle pasted files
+      const pastedFiles = Array.from(e.clipboardData?.files ?? []);
+      if (pastedFiles.length) {
+        handleFilesChange((prev) => [...prev, ...pastedFiles]);
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -37,8 +53,7 @@ export const ContentInput = memo<Props>((props) => {
 
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length) {
-      setFiles((prev) => [...prev, ...droppedFiles]);
-      props.onFilesChange?.([...files, ...droppedFiles]);
+      handleFilesChange((prev) => [...prev, ...droppedFiles]);
     }
   };
 
@@ -52,41 +67,45 @@ export const ContentInput = memo<Props>((props) => {
     input.type = 'file';
     input.multiple = true;
     input.click();
-
     input.onchange = (e: any) => {
       const files = Array.from(e.target.files) as File[];
-      setFiles((prev) => [...prev, ...files]);
-      props.onFilesChange?.([...files, ...files]);
+      handleFilesChange((prev) => [...prev, ...files]);
     };
   };
 
-  const removeFile = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index);
-    setFiles(newFiles);
-    props.onFilesChange?.(newFiles);
-  };
+  const removeFile = useConsistCallback((index: number) => {
+    handleFilesChange((files) => files.filter((_, i) => i !== index));
+  });
 
-  const handleSend = () => {
-    props.onSend?.(text, files);
-  };
+  const handleSend = useConsistCallback(() => {
+    Promise.resolve(props.onSend?.(text, files)).then(() => {
+      setFiles([]);
+      setText('');
+    });
+  });
 
   return (
     <div
-      className="p-4 border-2 border-dashed border-gray-300 rounded-lg"
-      onPasteCapture={handlePaste}
+      tabIndex={-1}
+      className="p-4 border-2 border-dashed border-gray-300 rounded-lg outline-0"
       onDragOverCapture={handleDragOver}
       onDropCapture={handleDrop}
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          handleSend();
+        }
+      }}
     >
       <div className="flex mb-4 rounded-md border-1 border-solid border-slate-6 overflow-hidden">
         <textarea
           value={text}
           onChange={handleTextChange}
-          className="w-full p-2 border-0 resize-y flex-1 outline-0 h-20"
-          placeholder="Type or paste text here..."
+          className="w-full p-2 border-0 resize-y flex-1 outline-0 h-20 min-h-10"
+          placeholder="Type or paste text / files here..."
         />
 
         <button
-          className="w-20 border-0 bg-slate-6 text-white text-xl disabled:bg-slate-4"
+          className="w-20 border-0 bg-slate-6 text-white hover:bg-slate-5 text-xl disabled:bg-slate-4"
           onClick={handleSend}
           disabled={!text && !files.length}
         >
@@ -95,16 +114,22 @@ export const ContentInput = memo<Props>((props) => {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <button className="bg-slate-6 text-white text-xl rounded-md border-0" onClick={openFilePicker}>
-          <i className="i-mdi-file-plus mr-1"></i>
+        <button
+          className="px-3 py-2 bg-slate-6 text-white rounded-md border-0 hover:bg-slate-5 transition-colors flex items-center gap-1 text-sm"
+          onClick={openFilePicker}
+        >
+          <i className="i-mdi-file-plus"></i>
           Add file
         </button>
 
         {files.map((file, index) => (
-          <div key={index} className="bg-slate-6 text-white text-xl rounded-md gap-2">
-            <span>{file.name}</span>
-            <button onClick={() => removeFile(index)} className="text-red-500 hover:bg-slate-4 h-full border-0">
-              <i className="i-mdi-delete"></i>
+          <div key={index} className="pl-3 bg-slate-4 text-white rounded-md flex items-center text-sm">
+            <span className="truncate max-w-48">{file.name}</span>
+            <button
+              onClick={() => removeFile(index)}
+              className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3 rounded-md"
+            >
+              <i className="i-mdi-close"></i>
             </button>
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import type { UploadRecord } from '../../../src/database';
 
@@ -11,12 +11,17 @@ export const UploadRecords = memo<Props>((props) => {
     (beforeId) => fetch('/api/list?beforeId=' + beforeId).then((res) => res.json() as Promise<UploadRecord[]>),
   );
 
-  console.log('data', data);
+  useEffect(() => {
+    const refresh = () => {
+      mutate();
+    };
+    window.addEventListener('upload-complete', refresh);
+    return () => window.removeEventListener('upload-complete', refresh);
+  }, [mutate]);
 
   return (
     <div className="p-4">
-      {isLoading && <div>Loading...</div>}
-      {error && <div>Error: {error.message}</div>}
+      {error && <div className='text-red-500 mb-4'>Error: {error.message}</div>}
       {data?.map((page, i) => (
         <div key={i}>
           {page.map((record) => (
@@ -24,8 +29,12 @@ export const UploadRecords = memo<Props>((props) => {
           ))}
         </div>
       ))}
-      <button onClick={() => setSize(size + 1)} disabled={isValidating}>
-        {isValidating && <i className="i-mdi-loading animate-spin"></i>}
+      <button 
+        onClick={() => setSize(size + 1)} 
+        disabled={isValidating}
+        className="w-full max-w-md mx-auto block py-3 px-6 mt-8 bg-slate-6 text-white rounded-md hover:bg-slate-5 disabled:bg-slate-4 transition-colors"
+      >
+        {isValidating && <i className="i-mdi-loading animate-spin mr-2"></i>}
         Load more
       </button>
     </div>
@@ -39,8 +48,8 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
   }, [props.record.files]);
 
   return (
-    <div className="p-4 rounded-lg bg-white shadow-2xl mb-2">
-      <div className="flex gap-4 text-sm text-gray">
+    <div className="p-4 rounded-lg bg-white shadow mb-2">
+      <div className="flex gap-4 text-sm text-gray flex-wrap">
         <span>
           <i className="i-mdi-user mr-1"></i>
           {props.record.uploader}
@@ -73,16 +82,20 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
         </span>
       </div>
 
-      {props.record.thumbnail}
       <pre className="max-h-md overflow-auto ws-pre-wrap">{props.record.message}</pre>
 
       {files.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex gap-2 flex-wrap">
           {files.map((file) => {
             const link = `/api/download?path=${encodeURIComponent(file.path)}`;
             return (
-              <div key={file.path} className="flex gap-2">
-                <a href={link} target="_blank" rel="noreferrer" className="flex gap-2 items-center decoration-none">
+              <div key={file.path} className="flex gap-2 m--2 mr-2">
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex gap-2 items-center decoration-none text-blue-6 hover:bg-blue-1 rounded p-2"
+                >
                   <i className="i-mdi-download"></i>
                   <span>{file.name}</span>
                   <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
@@ -131,6 +144,6 @@ function deleteRecord(id: number) {
     .then((res) => res.json())
     .then((data) => {
       console.log('deleted data', data);
-      window.document.dispatchEvent(new FocusEvent('focus'));
+      window.dispatchEvent(new Event('upload-complete'));
     });
 }
