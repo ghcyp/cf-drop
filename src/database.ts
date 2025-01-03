@@ -22,6 +22,13 @@ export interface UploadRecord {
   message: string;
 }
 
+export interface RecordFileItem {
+  name: string;
+  size: number;
+  path: string;
+  thumbnail?: string;
+}
+
 /**
  * get latest 20 records. in descending order (newest first)
  *

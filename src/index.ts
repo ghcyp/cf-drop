@@ -36,6 +36,7 @@ app.post("/api/upload", async (c) => {
   const body = await c.req.formData();
 
   const files = body.getAll("files").filter((file) => file instanceof File);
+  const thumbnails = body.getAll("thumbnails") as string[];
   const message = String(body.get("message") || "");
 
   if (!files.length && !message) {
@@ -55,6 +56,7 @@ app.post("/api/upload", async (c) => {
         name: fileName,
         path: filePath,
         size: r.size,
+        thumbnail: thumbnails[index] || "",
       };
     })
   );

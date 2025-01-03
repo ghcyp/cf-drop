@@ -10,6 +10,7 @@ const App = () => {
       const body = new FormData();
       body.append('message', text);
       files.forEach((file) => body.append('files', file));
+      files.forEach((file) => body.append('thumbnails', file.thumbnail || ''));
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');

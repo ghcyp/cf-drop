@@ -18,7 +18,10 @@ export const ContentInput = memo<Props>((props) => {
       return files;
     });
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      const thumbnailAdded = await Promise.all(files.map(addThumbnail));
+      if (thumbnailAdded.some((added) => added)) setFiles(files.slice());
+
       props.onFilesChange?.(files);
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
       if (totalSize > 0 && totalSize < 10e6 && !text) {
@@ -123,11 +126,16 @@ export const ContentInput = memo<Props>((props) => {
         </button>
 
         {files.map((file, index) => (
-          <div key={index} className="pl-3 bg-slate-4 text-white rounded-md flex items-center text-sm">
+          <div key={index} className="bg-slate-4 text-white rounded-md flex items-center text-sm overflow-hidden">
+            {file.thumbnail ? (
+              <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
+            ) : (
+              <div className="pl-3" />
+            )}
             <span className="truncate max-w-48">{file.name}</span>
             <button
               onClick={() => removeFile(index)}
-              className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3 rounded-md"
+              className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3"
             >
               <i className="i-mdi-close"></i>
             </button>
@@ -137,3 +145,34 @@ export const ContentInput = memo<Props>((props) => {
     </div>
   );
 });
+
+declare global {
+  interface File {
+    thumbnail?: string;
+  }
+}
+
+export async function addThumbnail(file: File) {
+  if (!file.type.startsWith('image/')) return false;
+  if (file.thumbnail) return false; // already has thumbnail
+
+  const url = URL.createObjectURL(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 200;
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+  file.thumbnail = thumbnail;
+
+  return true;
+}

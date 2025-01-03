@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import type { UploadRecord } from '../../../src/database';
+import type { RecordFileItem, UploadRecord } from '../../../src/database';
 
 interface Props {}
 
@@ -21,7 +21,7 @@ export const UploadRecords = memo<Props>((props) => {
 
   return (
     <div className="p-4">
-      {error && <div className='text-red-500 mb-4'>Error: {error.message}</div>}
+      {error && <div className="text-red-500 mb-4">Error: {error.message}</div>}
       {data?.map((page, i) => (
         <div key={i}>
           {page.map((record) => (
@@ -29,10 +29,10 @@ export const UploadRecords = memo<Props>((props) => {
           ))}
         </div>
       ))}
-      <button 
-        onClick={() => setSize(size + 1)} 
+      <button
+        onClick={() => setSize(size + 1)}
         disabled={isValidating}
-        className="w-full max-w-md mx-auto block py-3 px-6 mt-8 bg-slate-6 text-white rounded-md hover:bg-slate-5 disabled:bg-slate-4 transition-colors"
+        className="w-full max-w-md mx-auto block py-3 px-6 my-8 bg-slate-6 text-white rounded-md hover:bg-slate-5 disabled:bg-slate-4 transition-colors"
       >
         {isValidating && <i className="i-mdi-loading animate-spin mr-2"></i>}
         Load more
@@ -44,7 +44,7 @@ export const UploadRecords = memo<Props>((props) => {
 const UploadRecordItem = memo((props: { record: UploadRecord }) => {
   const files = useMemo(() => {
     if (!props.record.files) return [];
-    return JSON.parse(props.record.files) as { name: string; path: string; size: number }[];
+    return JSON.parse(props.record.files) as RecordFileItem[];
   }, [props.record.files]);
 
   return (
@@ -96,9 +96,21 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
                   rel="noreferrer"
                   className="flex gap-2 items-center decoration-none text-blue-6 hover:bg-blue-1 rounded p-2"
                 >
-                  <i className="i-mdi-download"></i>
-                  <span>{file.name}</span>
-                  <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
+                  {file.thumbnail ? (
+                    <>
+                      <img src={file.thumbnail} className="w-16 h-16 rounded-md mr-1" />
+                      <div className="flex flex-col gap-1">
+                        <span>{file.name}</span>
+                        <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <i className="i-mdi-file-outline"></i>
+                      <span>{file.name}</span>
+                      <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
+                    </>
+                  )}
                 </a>
               </div>
             );
