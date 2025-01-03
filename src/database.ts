@@ -111,3 +111,30 @@ export async function purgeRecordsBeforeId(
 
   return;
 }
+
+export async function deleteRecord(
+  db: D1Database,
+  id: number,
+  deleteFiles: (path: string[]) => Promise<void>
+) {
+  // 1. get record
+  const record = await db
+    .prepare(`SELECT * FROM upload_record WHERE id = ?`)
+    .bind(id)
+    .first<UploadRecord>();
+  if (!record) return;
+
+  // 2. delete files
+  if (!record.files) return;
+  try {
+    const files = JSON.parse(record.files) as {
+      name: string;
+      path: string;
+      size: number;
+    }[];
+    await deleteFiles(files.map((file) => file.path));
+  } catch {}
+
+  // 3. delete record
+  await db.prepare(`DELETE FROM upload_record WHERE id = ?`).bind(id).run();
+}

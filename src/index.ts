@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
   createUploadRecord,
+  deleteRecord,
   getUploadRecords,
   migrateTables,
   purgeRecordsBeforeId,
@@ -90,6 +91,13 @@ app.get("/api/download", async (c) => {
   headers.set("accept-ranges", "bytes");
   r.writeHttpMetadata(headers);
   return new Response(r.body, { headers });
+});
+
+app.post("/api/delete", async (c) => {
+  const body = await c.req.json();
+  const id = +body.id;
+  await deleteRecord(c.env.DB, id, (paths) => c.env.MY_BUCKET.delete(paths));
+  return c.json({ ok: true });
 });
 
 app.post("/api/purge", async (c) => {

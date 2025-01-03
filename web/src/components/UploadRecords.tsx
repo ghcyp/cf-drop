@@ -33,9 +33,6 @@ export const UploadRecords = memo<Props>((props) => {
 });
 
 const UploadRecordItem = memo((props: { record: UploadRecord }) => {
-  const [open, setOpen] = useState(false);
-  const toggleOpen = () => setOpen(!open);
-
   const files = useMemo(() => {
     if (!props.record.files) return [];
     return JSON.parse(props.record.files) as { name: string; path: string; size: number }[];
@@ -58,12 +55,26 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
             {toReadableSize(props.record.size)}
           </span>
         )}
+
+        <div className="mr-a">
+          <br />
+        </div>
+
+        {!!props.record.message && (
+          <span className="cursor-pointer hover:text-black" onClick={() => copyToClipboard(props.record.message)}>
+            <i className="i-mdi-clipboard mr-1"></i>
+            Copy Message
+          </span>
+        )}
+
+        <span className="cursor-pointer hover:text-red" onClick={() => deleteRecord(props.record.id)}>
+          <i className="i-mdi-trash mr-1"></i>
+          Delete
+        </span>
       </div>
 
       {props.record.thumbnail}
-      <pre className="max-h-md overflow-auto ws-pre-wrap" onClick={toggleOpen}>
-        {props.record.message}
-      </pre>
+      <pre className="max-h-md overflow-auto ws-pre-wrap">{props.record.message}</pre>
 
       {files.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -93,4 +104,33 @@ function toReadableSize(size: number) {
     unit++;
   }
   return `${size.toFixed(1)} ${units[unit]}`;
+}
+
+function copyToClipboard(text: string) {
+  try {
+    navigator.clipboard.writeText(text);
+  } catch (err) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
+}
+
+function deleteRecord(id: number) {
+  if (!confirm('Are you sure you want to delete this record?')) return;
+  fetch('/api/delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      console.log('deleted data', data);
+      window.document.dispatchEvent(new FocusEvent('focus'));
+    });
 }
