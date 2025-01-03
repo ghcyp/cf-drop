@@ -1,7 +1,7 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { UnoCSSRspackPlugin } from '@unocss/webpack/rspack';
-import { unoConfig } from './uno.config';
+import unoConfig from './uno.config';
 
 export default defineConfig({
   plugins: [pluginReact()],
