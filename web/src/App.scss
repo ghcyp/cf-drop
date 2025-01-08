@@ -42,3 +42,23 @@ input[type='text'] {
   font-size: inherit;
   font-family: Menlo, Consolas, Roboto Mono, 'Source Code Pro', 'Courier New', Courier, monospace;
 }
+
+.popover-container {
+  position: relative;
+
+  .popover-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: max-content;
+  }
+
+  &:hover,
+  &:focus-within {
+    .popover-content {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}

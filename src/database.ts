@@ -16,9 +16,9 @@ export async function migrateTables(db: D1Database) {
 export interface UploadRecord {
   id: number;
   uploader: string;
-  ctime: Date;
+  ctime: number;
   size: number;
-  files: string; // JSON string of [{ name, size, path }]
+  files: RecordFileItem[];
   message: string;
 }
 
@@ -27,6 +27,44 @@ export interface RecordFileItem {
   size: number;
   path: string;
   thumbnail?: string;
+}
+
+function fromDB(data: any): UploadRecord {
+  let files: RecordFileItem[] = [];
+  try {
+    files = JSON.parse(data.files);
+  } catch {}
+
+  return {
+    id: data.id,
+    uploader: data.uploader,
+    ctime: +new Date(data.ctime),
+    size: data.size,
+    files,
+    message: data.message,
+  };
+}
+
+function toDB(record: UploadRecord): any {
+  return {
+    id: record.id,
+    uploader: record.uploader,
+    ctime: new Date(+record.ctime),
+    size: record.size,
+    files: JSON.stringify(
+      Array.from(
+        record.files || [],
+        (item) =>
+          item && {
+            name: String(item.name),
+            size: +item.size,
+            path: String(item.path || ""),
+            thumbnail: String(item.thumbnail || ""),
+          }
+      ).filter(Boolean)
+    ),
+    message: record.message,
+  };
 }
 
 /**
@@ -48,16 +86,18 @@ export async function getUploadRecords(
 
   const rows = await db.prepare(sql).all();
   for (const row of rows.results as any[]) {
-    records.push({
-      id: row.id,
-      uploader: row.uploader,
-      ctime: new Date(row.ctime),
-      size: row.size,
-      files: row.files,
-      message: row.message,
-    });
+    records.push(fromDB(row));
   }
   return records;
+}
+
+export async function getSingleUploadRecord(db: D1Database, id: number) {
+  const record = await db
+    .prepare(`SELECT * FROM upload_record WHERE id = ?`)
+    .bind(id)
+    .first<UploadRecord>();
+  if (!record) return null;
+  return fromDB(record);
 }
 
 export async function createUploadRecord(
@@ -68,16 +108,11 @@ export async function createUploadRecord(
     .prepare(
       "INSERT INTO upload_record (uploader, size, files, message) VALUES (?, ?, ?, ?)"
     )
-    .bind(
-      record.uploader,
-      record.size,
-      record.files,
-      record.message
-    )
+    .bind(record.uploader, record.size, record.files, record.message)
     .run();
   const id = res.meta.last_row_id;
   const inserted: UploadRecord = {
-    ...record,
+    ...toDB(record as UploadRecord),
     ctime: new Date(),
     id,
   };
@@ -98,15 +133,9 @@ export async function purgeRecordsBeforeId(
 
   // 2. delete files
   for (const row of rows.results) {
-    if (!row.files) continue;
-    try {
-      const files = JSON.parse(row.files) as {
-        name: string;
-        path: string;
-        size: number;
-      }[];
-      await deleteFiles(files.map((file) => file.path));
-    } catch {}
+    const files = fromDB(row).files;
+    if (!files.length) continue;
+    await deleteFiles(files.map((file) => file.path));
   }
 
   // 3. delete records
@@ -121,20 +150,12 @@ export async function deleteRecord(
   deleteFiles: (path: string[]) => Promise<void>
 ) {
   // 1. get record
-  const record = await db
-    .prepare(`SELECT * FROM upload_record WHERE id = ?`)
-    .bind(id)
-    .first<UploadRecord>();
+  const record = await getSingleUploadRecord(db, id);
   if (!record) return;
 
   // 2. delete files
-  if (!record.files) return;
   try {
-    const files = JSON.parse(record.files) as {
-      name: string;
-      path: string;
-      size: number;
-    }[];
+    const files = record.files;
     await deleteFiles(files.map((file) => file.path));
   } catch {}
 

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import type { RecordFileItem, UploadRecord } from '../../../src/database';
+import type { UploadRecord } from '../../../src/database';
 
 interface Props {}
 
@@ -38,10 +38,9 @@ export const UploadRecords = memo<Props>((props) => {
 });
 
 const UploadRecordItem = memo((props: { record: UploadRecord }) => {
-  const files = useMemo(() => {
-    if (!props.record.files) return [];
-    return JSON.parse(props.record.files) as RecordFileItem[];
-  }, [props.record.files]);
+  const files = useMemo(() => props.record.files || [], [props.record.files]);
+
+  const actionLink = 'cursor-pointer hover:text-black text-inherit decoration-none';
 
   return (
     <div className="p-4 rounded-lg bg-white shadow mb-2">
@@ -66,13 +65,27 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
         </div>
 
         {!!props.record.message && (
-          <span className="cursor-pointer hover:text-black" onClick={() => copyToClipboard(props.record.message)}>
-            <i className="i-mdi-clipboard mr-1"></i>
-            Copy Message
-          </span>
+          <div className="popover-container">
+            <div className={actionLink} onClick={() => copyToClipboard(props.record.message)}>
+              <i className="i-mdi-clipboard mr-1"></i>
+              Copy Message
+            </div>
+
+            <div className="popover-content bg-white min-w-full">
+              <a
+                className={actionLink}
+                target="_blank"
+                rel="noreferrer"
+                href={`/api/download/${encodeURIComponent(props.record.id)}/message`}
+              >
+                <i className="i-mdi-download mr-1"></i>
+                As File
+              </a>
+            </div>
+          </div>
         )}
 
-        <span className="cursor-pointer hover:text-red" onClick={() => deleteRecord(props.record.id)}>
+        <span className={`${actionLink} hover:text-red`} onClick={() => deleteRecord(props.record.id)}>
           <i className="i-mdi-trash mr-1"></i>
           Delete
         </span>
@@ -82,8 +95,8 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
 
       {files.length > 0 && (
         <div className="flex flex-wrap m--2">
-          {files.map((file) => {
-            const link = `/api/download?path=${encodeURIComponent(file.path)}`;
+          {files.map((file, index) => {
+            const link = `/api/download/${props.record.id}/${index}`;
             return (
               <div key={file.path} className="flex gap-2 p-2 max-w-sm min-w-0">
                 <a

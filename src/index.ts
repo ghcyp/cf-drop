@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   createUploadRecord,
   deleteRecord,
+  getSingleUploadRecord,
   getUploadRecords,
   migrateTables,
   purgeRecordsBeforeId,
@@ -65,17 +66,28 @@ app.post("/api/upload", async (c) => {
   const record = await createUploadRecord(c.env.DB, {
     uploader,
     size: uploadedFiles.reduce((acc, file) => acc + file.size, 0),
-    files: JSON.stringify(uploadedFiles),
+    files: uploadedFiles,
     message,
   });
 
   return c.json({ record });
 });
 
-app.get("/api/download", async (c) => {
-  const filePath = c.req.query("path");
+app.get("/api/download/:id/:index", async (c) => {
+  const id = +c.req.param("id");
+  const index = c.req.param("index");
+  const record = await getSingleUploadRecord(c.env.DB, id);
+  if (!record) {
+    return c.status(404);
+  }
+
+  if (index === "message") {
+    return c.text(record.message);
+  }
+
+  const filePath = record.files[+index]?.path;
   if (!filePath) {
-    return c.json({ error: "No file path" });
+    return c.status(404);
   }
 
   const r = await c.env.MY_BUCKET.get(filePath, {
@@ -87,8 +99,16 @@ app.get("/api/download", async (c) => {
     return c.json({ error: "File not found" });
   }
 
+  const basename = filePath.split("/").pop()!.replace(/\?.*/, "");
   const headers = new Headers();
   headers.set("accept-ranges", "bytes");
+
+  if (
+    !/\.(jpg|png|gif|avif|mp4|mov|txt|html|js|css|json|ya?ml)/.test(basename)
+  ) {
+    headers.set("content-disposition", `attachment; filename="${basename}"`);
+  }
+
   r.writeHttpMetadata(headers);
   return new Response(r.body, { headers });
 });
