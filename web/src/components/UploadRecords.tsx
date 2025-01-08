@@ -81,33 +81,30 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
       <pre className="max-h-md overflow-auto ws-pre-wrap">{props.record.message}</pre>
 
       {files.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap m--2">
           {files.map((file) => {
             const link = `/api/download?path=${encodeURIComponent(file.path)}`;
             return (
-              <div key={file.path} className="flex gap-2 m--2 mr-2">
+              <div key={file.path} className="flex gap-2 p-2 max-w-sm min-w-0">
                 <a
                   href={link}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex gap-2 items-center decoration-none text-brand-6 hover:bg-brand-1 rounded p-2"
+                  title={file.name}
+                  className="flex gap-2 items-center decoration-none text-brand-6 hover:bg-brand-1 rounded p-2 min-w-0"
                 >
                   {file.thumbnail ? (
                     <>
                       <img src={file.thumbnail} className="w-16 h-16 rounded-md mr-1" />
-                      <div className="flex flex-col gap-1">
-                        <span className="max-w-xs truncate" title={file.name}>
-                          {file.name}
-                        </span>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="min-w-0 truncate">{file.name}</span>
                         <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
                       </div>
                     </>
                   ) : (
                     <>
                       <i className="i-mdi-file-outline"></i>
-                      <span className="max-w-xs truncate" title={file.name}>
-                        {file.name}
-                      </span>
+                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
                       <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
                     </>
                   )}

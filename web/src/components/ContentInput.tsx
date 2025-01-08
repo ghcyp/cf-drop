@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useConsistCallback } from '../hooks/useConsistCallback';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 export const ContentInput = memo<Props>((props) => {
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState('');
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleFilesChange = useConsistCallback((cb: (files: File[]) => File[]) => {
     let files: File[];
@@ -33,6 +34,7 @@ export const ContentInput = memo<Props>((props) => {
     }, 0);
   });
 
+  const [isDragOver, setIsDragOver] = useState(false);
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       // Handle pasted files
@@ -40,25 +42,81 @@ export const ContentInput = memo<Props>((props) => {
       if (pastedFiles.length) {
         handleFilesChange((prev) => [...prev, ...pastedFiles]);
       }
+
+      // Handle pasted text
+      const pastedText = e.clipboardData?.getData('text/plain');
+      if (pastedText) {
+        const textarea = textAreaRef.current;
+        if (textarea) {
+          textarea.focus();
+          const selectionStart = textarea.selectionStart;
+          const selectionEnd = textarea.selectionEnd;
+          const oldText = textarea.value;
+          const newText = oldText.slice(0, selectionStart) + pastedText + oldText.slice(selectionEnd);
+          setText(newText);
+
+          setTimeout(() => {
+            textarea.selectionStart = selectionStart + pastedText.length;
+            textarea.selectionEnd = selectionStart + pastedText.length;
+          }, 0);
+        } else {
+          setText(pastedText);
+        }
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
     };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
+
+    const handleDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.some((type) => type === 'Files')) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      setIsDragOver(true);
+    };
+
+    window.addEventListener('paste', handlePaste, true);
+    window.addEventListener('dragover', handleDragOver, true);
+
+    return () => {
+      window.removeEventListener('paste', handlePaste, true);
+      window.removeEventListener('dragover', handleDragOver, true);
+    };
   }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    if (droppedFiles.length) {
-      handleFilesChange((prev) => [...prev, ...droppedFiles]);
+  useEffect(() => {
+    if (!isDragOver) {
+      document.body.style.pointerEvents = 'auto';
+      return;
     }
-  };
+
+    document.body.style.pointerEvents = 'none';
+
+    const handleDragLeave = () => {
+      setIsDragOver(false);
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      setIsDragOver(false);
+      e.preventDefault();
+      e.stopPropagation();
+
+      const droppedFiles = Array.from(e.dataTransfer!.files);
+      if (droppedFiles.length) {
+        handleFilesChange((prev) => [...prev, ...droppedFiles]);
+      }
+    };
+
+    window.addEventListener('drop', handleDrop, true);
+    window.addEventListener('dragleave', handleDragLeave, true);
+
+    return () => {
+      window.removeEventListener('drop', handleDrop, true);
+      window.removeEventListener('dragleave', handleDragLeave, true);
+    };
+  }, [isDragOver]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -90,17 +148,16 @@ export const ContentInput = memo<Props>((props) => {
   return (
     <div
       tabIndex={-1}
-      className="p-4 border-2 border-dashed border-gray-300 rounded-lg outline-0"
-      onDragOverCapture={handleDragOver}
-      onDropCapture={handleDrop}
+      className="p-4 outline-0"
       onKeyDown={(e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           handleSend();
         }
       }}
     >
-      <div className="flex mb-4 rounded-md shadow overflow-hidden">
+      <div className="flex mb-4 rounded-md shadow overflow-hidden outline-1 outline-solid outline-transparent focus-within:outline-brand-6">
         <textarea
+          ref={textAreaRef}
           value={text}
           onChange={handleTextChange}
           className="w-full p-2 border-0 resize-y flex-1 outline-0 h-20 min-h-10"
@@ -135,6 +192,15 @@ export const ContentInput = memo<Props>((props) => {
           </div>
         ))}
       </div>
+
+      {!!isDragOver && (
+        <div className="fixed inset-0 bg-gray-3 opacity-50 flex items-center justify-center pointer-events-none">
+          <div className="animate-slide-in-up animate-duration-200 text-center">
+            <i className="i-mdi-upload text-[64px]"></i>
+            <div className="text-center text-2xl">Drop files to add</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

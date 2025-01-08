@@ -1,10 +1,10 @@
 import { presetIcons } from '@unocss/preset-icons';
 import { presetUno } from '@unocss/preset-uno';
 import type { UserConfig } from '@unocss/core';
-import chroma from 'chroma-js'
+import chroma from 'chroma-js';
 import MDIIcons from '@iconify-json/mdi/icons.json' assert { type: 'json' };
 
-import manifest from './public/manifest.json'
+import manifest from './public/manifest.json';
 
 const brandColor = manifest.theme_color;
 const colorScale = chroma.scale(['#fff', brandColor, '#000']).mode('oklch').colors(10);
@@ -28,8 +28,8 @@ const unoConfig: UserConfig = {
         7: colorScale[7],
         8: colorScale[8],
         9: colorScale[9],
-      }
-    }
+      },
+    },
   },
   presets: [
     presetUno(),
@@ -37,6 +37,7 @@ const unoConfig: UserConfig = {
       extraProperties: {
         display: 'inline-block',
         'vertical-align': 'middle',
+        'flex-shrink': '0',
         // ...
       },
       collections: {
