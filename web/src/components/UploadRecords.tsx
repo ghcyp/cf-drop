@@ -73,10 +73,11 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
 
             <div className="popover-content bg-white min-w-full">
               <a
-                className={actionLink}
+                className={`${actionLink} py-2`}
                 target="_blank"
                 rel="noreferrer"
                 href={`/api/download/${encodeURIComponent(props.record.id)}/message`}
+                download={`${props.record.id}.txt`}
               >
                 <i className="i-mdi-download mr-1"></i>
                 As File

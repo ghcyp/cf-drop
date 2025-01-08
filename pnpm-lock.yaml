@@ -33,6 +33,9 @@ importers:
       swr:
         specifier: ^2.3.0
         version: 2.3.0(react@19.0.0)
+      workbox-window:
+        specifier: ^7.3.0
+        version: 7.3.0
     devDependencies:
       '@aaroon/workbox-rspack-plugin':
         specifier: ^0.3.2
