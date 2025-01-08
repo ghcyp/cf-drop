@@ -45,7 +45,7 @@ function fromDB(data: any): UploadRecord {
   };
 }
 
-function toDB(record: UploadRecord): any {
+function toDB(record: UploadRecord) {
   return {
     id: record.id,
     uploader: record.uploader,
@@ -104,16 +104,22 @@ export async function createUploadRecord(
   db: D1Database,
   record: Omit<UploadRecord, "id" | "ctime">
 ) {
+  const inserting = toDB(record as UploadRecord);
   const res = await db
     .prepare(
       "INSERT INTO upload_record (uploader, size, files, message) VALUES (?, ?, ?, ?)"
     )
-    .bind(record.uploader, record.size, record.files, record.message)
+    .bind(
+      inserting.uploader,
+      inserting.size,
+      inserting.files,
+      inserting.message
+    )
     .run();
   const id = res.meta.last_row_id;
   const inserted: UploadRecord = {
-    ...toDB(record as UploadRecord),
-    ctime: new Date(),
+    ...(record as UploadRecord),
+    ctime: +new Date(),
     id,
   };
   return { id, inserted };
