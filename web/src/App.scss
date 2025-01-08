@@ -1,0 +1,44 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  border: 0;
+}
+
+button {
+  position: relative;
+
+  @apply cursor-pointer disabled:cursor-default;
+  @apply bg-brand hover:bg-brand-4 disabled:bg-brand-3 text-white rounded-md border-0 transition-colors;
+  @apply flex items-center justify-center gap-1 px-4 py-2;
+
+  &:not(:disabled)::after {
+    content: ' ';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, #fff1 60%, #fff0);
+  }
+}
+
+pre,
+textarea,
+input[type='text'] {
+  font-size: inherit;
+  font-family: Menlo, Consolas, Roboto Mono, 'Source Code Pro', 'Courier New', Courier, monospace;
+}

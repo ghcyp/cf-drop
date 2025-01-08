@@ -13,3 +13,9 @@ npx wrangler d1 create cf-drop
 npm run deploy
 # npm run dev             # -- for local development
 ```
+
+You can access the app on mobile, and install it as a PWA.
+
+## Customize
+
+- Change theme color in `./web/public/manifest.json`

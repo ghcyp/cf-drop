@@ -1,19 +1,19 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
-import { UnoCSSRspackPlugin } from '@unocss/webpack/rspack';
-import unoConfig from './uno.config';
+import { configRsPack } from './rspack.config';
+import { pluginSass } from '@rsbuild/plugin-sass';
 
 export default defineConfig({
   html: {
-    title: 'cf-drop'
-  },
-  plugins: [pluginReact()],
-  tools: {
-    rspack(config, ctx) {
-      ctx.prependPlugins(UnoCSSRspackPlugin({ ...unoConfig }));
-      config.optimization ??= {};
-      config.optimization.realContentHash = true;
+    template: './template.html',
+    title: 'cf-drop',
+    templateParameters: {
+      publicPath: '/',
     },
+  },
+  plugins: [pluginSass(), pluginReact()],
+  tools: {
+    rspack: configRsPack,
   },
   server: {
     proxy: {

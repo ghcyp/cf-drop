@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import './App.css';
+import './App.scss';
 import { ContentInput } from './components/ContentInput';
 import { UploadRecords } from './components/UploadRecords';
 
@@ -47,7 +47,7 @@ const App = () => {
   }
 
   return (
-    <div className="bg-slate-2 h-vh flex flex-col">
+    <div className="bg-gray-2 h-vh flex flex-col">
       <ContentInput onSend={startUpload} />
       <SimpleProgressBar progress={progress} />
       <div className="flex-1 overflow-auto">
@@ -59,8 +59,8 @@ const App = () => {
 
 function SimpleProgressBar(props: { progress: number }) {
   return (
-    <div className="bg-slate-4 h-2 rounded overflow-hidden">
-      <div className="bg-slate-6 h-full" style={{ width: `${props.progress}%` }} />
+    <div className="bg-gray-3 h-2 rounded overflow-hidden">
+      <div className="bg-brand-6 h-full" style={{ width: `${props.progress}%` }} />
     </div>
   );
 }

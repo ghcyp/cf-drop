@@ -29,11 +29,7 @@ export const UploadRecords = memo<Props>((props) => {
           ))}
         </div>
       ))}
-      <button
-        onClick={() => setSize(size + 1)}
-        disabled={isValidating}
-        className="w-full max-w-md mx-auto block py-3 px-6 my-8 bg-slate-6 text-white rounded-md hover:bg-slate-5 disabled:bg-slate-4 transition-colors"
-      >
+      <button onClick={() => setSize(size + 1)} disabled={isValidating} className="w-full max-w-md mx-auto my-8 block">
         {isValidating && <i className="i-mdi-loading animate-spin mr-2"></i>}
         Load more
       </button>
@@ -94,20 +90,24 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
                   href={link}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex gap-2 items-center decoration-none text-blue-6 hover:bg-blue-1 rounded p-2"
+                  className="flex gap-2 items-center decoration-none text-brand-6 hover:bg-brand-1 rounded p-2"
                 >
                   {file.thumbnail ? (
                     <>
                       <img src={file.thumbnail} className="w-16 h-16 rounded-md mr-1" />
                       <div className="flex flex-col gap-1">
-                        <span>{file.name}</span>
+                        <span className="max-w-xs truncate" title={file.name}>
+                          {file.name}
+                        </span>
                         <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
                       </div>
                     </>
                   ) : (
                     <>
                       <i className="i-mdi-file-outline"></i>
-                      <span>{file.name}</span>
+                      <span className="max-w-xs truncate" title={file.name}>
+                        {file.name}
+                      </span>
                       <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
                     </>
                   )}

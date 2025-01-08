@@ -99,7 +99,7 @@ export const ContentInput = memo<Props>((props) => {
         }
       }}
     >
-      <div className="flex mb-4 rounded-md border-1 border-solid border-slate-6 overflow-hidden">
+      <div className="flex mb-4 rounded-md shadow overflow-hidden">
         <textarea
           value={text}
           onChange={handleTextChange}
@@ -107,26 +107,19 @@ export const ContentInput = memo<Props>((props) => {
           placeholder="Type or paste text / files here..."
         />
 
-        <button
-          className="w-20 border-0 bg-slate-6 text-white hover:bg-slate-5 text-xl disabled:bg-slate-4"
-          onClick={handleSend}
-          disabled={!text && !files.length}
-        >
+        <button className="w-20 rounded-none" onClick={handleSend} disabled={!text && !files.length}>
           <i className="i-mdi-send"></i>
         </button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <button
-          className="px-3 py-2 bg-slate-6 text-white rounded-md border-0 hover:bg-slate-5 transition-colors flex items-center gap-1 text-sm"
-          onClick={openFilePicker}
-        >
+        <button onClick={openFilePicker}>
           <i className="i-mdi-file-plus"></i>
           Add file
         </button>
 
         {files.map((file, index) => (
-          <div key={index} className="bg-slate-4 text-white rounded-md flex items-center text-sm overflow-hidden">
+          <div key={index} className="bg-brand-4 text-white rounded-md flex items-center text-sm overflow-hidden">
             {file.thumbnail ? (
               <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
             ) : (

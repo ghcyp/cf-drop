@@ -1,0 +1,43 @@
+{
+  "short_name": "cf-drop",
+  "name": "cf-drop",
+  "description": "A fast and simple tool to store and share temporary files via Cloudflare Workers.",
+  "purpose": "any maskable",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#859F3D",
+  "background_color": "#e5e7eb",
+  "share_target": {
+    "action": "/api/share_target/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": "*/*"
+        }
+      ]
+    }
+  }
+}
