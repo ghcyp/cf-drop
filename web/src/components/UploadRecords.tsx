@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import type { UploadRecord } from '../../../src/database';
+import { fetchAPI } from '../store/auth';
 
 interface Props {}
 
@@ -8,15 +9,16 @@ export const UploadRecords = memo<Props>((props) => {
   // all records. newest first
   const { data, error, isLoading, isValidating, mutate, size, setSize } = useSWRInfinite(
     (_, page?: UploadRecord[]) => (page ? String(page?.at(-1)?.id ?? '') : 'init'),
-    (beforeId) => fetch('/api/list?beforeId=' + beforeId).then((res) => res.json() as Promise<UploadRecord[]>),
+    (beforeId) =>
+      fetchAPI('/api/list?beforeId=' + beforeId).then((res) => res.json() as Promise<UploadRecord[]>),
   );
 
   useEffect(() => {
     const refresh = () => {
       mutate();
     };
-    window.addEventListener('upload-complete', refresh);
-    return () => window.removeEventListener('upload-complete', refresh);
+    window.addEventListener('records-updated', refresh);
+    return () => window.removeEventListener('records-updated', refresh);
   }, [mutate]);
 
   return (
@@ -76,7 +78,7 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
                 className={`${actionLink} py-2`}
                 target="_blank"
                 rel="noreferrer"
-                href={`/api/download/${encodeURIComponent(props.record.id)}/message`}
+                href={`/api/download/${encodeURIComponent(props.record.slug)}/message`}
                 download={`${props.record.id}.txt`}
               >
                 <i className="i-mdi-download mr-1"></i>
@@ -97,7 +99,7 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
       {files.length > 0 && (
         <div className="flex flex-wrap m--2">
           {files.map((file, index) => {
-            const link = `/api/download/${props.record.id}/${index}`;
+            const link = `/api/download/${props.record.slug}/${index}`;
             return (
               <div key={file.path} className="flex gap-2 p-2 max-w-sm min-w-0">
                 <a
@@ -157,7 +159,7 @@ function copyToClipboard(text: string) {
 
 function deleteRecord(id: number) {
   if (!confirm('Are you sure you want to delete this record?')) return;
-  fetch('/api/delete', {
+  fetchAPI('/api/delete', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -167,6 +169,6 @@ function deleteRecord(id: number) {
     .then((res) => res.json())
     .then((data) => {
       console.log('deleted data', data);
-      window.dispatchEvent(new Event('upload-complete'));
+      window.dispatchEvent(new Event('records-updated'));
     });
 }

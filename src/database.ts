@@ -3,6 +3,7 @@ export async function migrateTables(db: D1Database) {
     `
     CREATE TABLE IF NOT EXISTS upload_record (
       id INTEGER PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
       uploader TEXT NOT NULL,
       ctime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       size INTEGER DEFAULT 0,
@@ -15,6 +16,7 @@ export async function migrateTables(db: D1Database) {
 
 export interface UploadRecord {
   id: number;
+  slug: string;
   uploader: string;
   ctime: number;
   size: number;
@@ -37,6 +39,7 @@ function fromDB(data: any): UploadRecord {
 
   return {
     id: data.id,
+    slug: data.slug,
     uploader: data.uploader,
     ctime: +new Date(data.ctime),
     size: data.size,
@@ -48,6 +51,7 @@ function fromDB(data: any): UploadRecord {
 function toDB(record: UploadRecord) {
   return {
     id: record.id,
+    slug: record.slug,
     uploader: record.uploader,
     ctime: new Date(+record.ctime),
     size: record.size,
@@ -72,7 +76,7 @@ function toDB(record: UploadRecord) {
  *
  * to fetch older records, pass `beforeId` option (which is last id of prev page)
  */
-export async function getUploadRecords(
+export async function listUploadRecords(
   db: D1Database,
   opts: { beforeId?: number } = {}
 ) {
@@ -91,7 +95,7 @@ export async function getUploadRecords(
   return records;
 }
 
-export async function getSingleUploadRecord(db: D1Database, id: number) {
+export async function getUploadRecord(db: D1Database, id: number) {
   const record = await db
     .prepare(`SELECT * FROM upload_record WHERE id = ?`)
     .bind(id)
@@ -100,16 +104,31 @@ export async function getSingleUploadRecord(db: D1Database, id: number) {
   return fromDB(record);
 }
 
+export async function getUploadRecordBySlug(db: D1Database, slug: string) {
+  const record = await db
+    .prepare(`SELECT * FROM upload_record WHERE slug = ?`)
+    .bind(slug)
+    .first<UploadRecord>();
+  if (!record) return null;
+  return fromDB(record);
+}
+
+export function randomId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(-4);
+}
+
 export async function createUploadRecord(
   db: D1Database,
-  record: Omit<UploadRecord, "id" | "ctime">
+  record: Omit<UploadRecord, "id" | "ctime" | "slug"> & { slug?: string }
 ) {
   const inserting = toDB(record as UploadRecord);
+  const slug = inserting.slug || randomId();
   const res = await db
     .prepare(
-      "INSERT INTO upload_record (uploader, size, files, message) VALUES (?, ?, ?, ?)"
+      "INSERT INTO upload_record (slug, uploader, size, files, message) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(
+      slug,
       inserting.uploader,
       inserting.size,
       inserting.files,
@@ -121,6 +140,7 @@ export async function createUploadRecord(
     ...(record as UploadRecord),
     ctime: +new Date(),
     id,
+    slug,
   };
   return { id, inserted };
 }
@@ -156,7 +176,7 @@ export async function deleteRecord(
   deleteFiles: (path: string[]) => Promise<void>
 ) {
   // 1. get record
-  const record = await getSingleUploadRecord(db, id);
+  const record = await getUploadRecord(db, id);
   if (!record) return;
 
   // 2. delete files

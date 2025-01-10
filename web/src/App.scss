@@ -15,6 +15,11 @@ textarea {
   font-family: inherit;
   font-size: inherit;
   border: 0;
+  outline: 0px solid transparent;
+
+  &:focus {
+    @apply ring ring-brand-3 outline-1 outline-brand-6;
+  }
 }
 
 button {

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import './App.scss';
 import { ContentInput } from './components/ContentInput';
 import { UploadRecords } from './components/UploadRecords';
+import { $password } from './store/auth';
+import { store } from './store/store';
+import { PasswordInput } from './components/PasswordInput';
 
 const App = () => {
   const [progress, setProgress] = useState(0);
@@ -15,6 +18,7 @@ const App = () => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
       xhr.setRequestHeader('x-uploader', 'yon');
+      xhr.setRequestHeader('x-password', store.get($password));
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -29,7 +33,7 @@ const App = () => {
         if (xhr.status === 200) {
           // const data = JSON.parse(xhr.responseText);
           setProgress(0);
-          window.dispatchEvent(new Event('upload-complete'));
+          window.dispatchEvent(new Event('records-updated'));
           resolve();
           return;
         }
@@ -53,6 +57,7 @@ const App = () => {
       <div className="flex-1 overflow-auto">
         <UploadRecords />
       </div>
+      <PasswordInput />
     </div>
   );
 };

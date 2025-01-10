@@ -155,7 +155,7 @@ export const ContentInput = memo<Props>((props) => {
         }
       }}
     >
-      <div className="flex mb-4 rounded-md shadow overflow-hidden outline-1 outline-solid outline-transparent focus-within:outline-brand-6">
+      <div className="flex mb-4 rounded-md shadow overflow-hidden outline-1 outline-solid outline-transparent focus-within:outline-brand-6 focus-within:ring focus-within:ring-brand-3">
         <textarea
           ref={textAreaRef}
           value={text}

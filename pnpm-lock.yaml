@@ -24,6 +24,9 @@ importers:
 
   web:
     dependencies:
+      jotai:
+        specifier: ^2.11.0
+        version: 2.11.0(@types/react@19.0.2)(react@19.0.0)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -2125,6 +2128,18 @@ packages:
   jiti@2.4.2:
     resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
     hasBin: true
+
+  jotai@2.11.0:
+    resolution: {integrity: sha512-zKfoBBD1uDw3rljwHkt0fWuja1B76R7CjznuBO+mSX6jpsO1EBeWNRKpeaQho9yPI/pvCv4recGfgOXGxwPZvQ==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=17.0.0'
+      react: '>=17.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -5269,6 +5284,11 @@ snapshots:
   jiti@1.21.7: {}
 
   jiti@2.4.2: {}
+
+  jotai@2.11.0(@types/react@19.0.2)(react@19.0.0):
+    optionalDependencies:
+      '@types/react': 19.0.2
+      react: 19.0.0
 
   js-tokens@4.0.0: {}
 

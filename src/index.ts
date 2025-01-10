@@ -2,25 +2,36 @@ import { Hono } from "hono";
 import {
   createUploadRecord,
   deleteRecord,
-  getSingleUploadRecord,
-  getUploadRecords,
+  listUploadRecords,
+  getUploadRecordBySlug,
   migrateTables,
   purgeRecordsBeforeId,
 } from "./database";
+import { H } from "hono/types";
 
 type Bindings = {
   ASSETS: { fetch: typeof fetch };
   DB: D1Database;
   MY_BUCKET: R2Bucket;
+  PASSWORD: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.get("/api/list", async (c) => {
+const authWithPassword: H<{ Bindings: Bindings }> = async (c, next) => {
+  if (c.env.PASSWORD && c.req.header("x-password") !== c.env.PASSWORD) {
+    c.status(401);
+    return c.json({ error: "Password required" });
+  }
+
+  return await next();
+};
+
+app.get("/api/list", authWithPassword, async (c) => {
   await migrateTables(c.env.DB);
 
   const beforeId = +c.req.query("beforeId")!;
-  const list = await getUploadRecords(c.env.DB, { beforeId });
+  const list = await listUploadRecords(c.env.DB, { beforeId });
   return c.json(list);
 
   // const r = await createUploadRecord(c.env.DB, {
@@ -32,7 +43,7 @@ app.get("/api/list", async (c) => {
   // return c.json(r)
 });
 
-app.post("/api/upload", async (c) => {
+app.post("/api/upload", authWithPassword, async (c) => {
   const uploader = c.req.header("x-uploader") || "unknown";
   const body = await c.req.formData();
 
@@ -73,10 +84,10 @@ app.post("/api/upload", async (c) => {
   return c.json({ record });
 });
 
-app.get("/api/download/:id/:index", async (c) => {
-  const id = +c.req.param("id");
+app.get("/api/download/:slug/:index", async (c) => {
+  const slug = c.req.param("slug");
   const index = c.req.param("index");
-  const record = await getSingleUploadRecord(c.env.DB, id);
+  const record = await getUploadRecordBySlug(c.env.DB, slug);
   if (!record) {
     return c.status(404);
   }
@@ -113,14 +124,14 @@ app.get("/api/download/:id/:index", async (c) => {
   return new Response(r.body, { headers });
 });
 
-app.post("/api/delete", async (c) => {
+app.post("/api/delete", authWithPassword, async (c) => {
   const body = await c.req.json();
   const id = +body.id;
   await deleteRecord(c.env.DB, id, (paths) => c.env.MY_BUCKET.delete(paths));
   return c.json({ ok: true });
 });
 
-app.post("/api/purge", async (c) => {
+app.post("/api/purge", authWithPassword, async (c) => {
   const beforeId = 9999999;
   await purgeRecordsBeforeId(c.env.DB, beforeId, (paths) =>
     c.env.MY_BUCKET.delete(paths)
