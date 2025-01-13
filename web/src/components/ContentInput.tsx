@@ -144,6 +144,13 @@ export const ContentInput = memo<Props>((props) => {
     props.onSend?.(text, files)
   });
 
+  const doClear = useConsistCallback(() => {
+    setFiles([]);
+    setText('');
+    props.onTextChange?.('');
+    props.onFilesChange?.([]);
+  });
+
   useEffect(() => { if (props.text !== undefined && props.text !== text) setText(props.text); }, [props.text]);
   useEffect(() => { if (props.files !== undefined && !isEqual(props.files, files)) setFiles(props.files); }, [props.files]);
 
@@ -172,12 +179,16 @@ export const ContentInput = memo<Props>((props) => {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <button onClick={openFilePicker}>
+        <button onClick={openFilePicker} key='addFileBtn'>
           <i className="i-mdi-file-plus"></i>
           Add file
         </button>
 
         {files.map((file, index) => <UploadedFileItem file={file} index={index} removeFile={removeFile} key={index} />)}
+
+        <button onClick={doClear} className='btn-gray' key='clearBtn'>
+          Clear
+        </button>
       </div>
 
       {!!isDragOver && (

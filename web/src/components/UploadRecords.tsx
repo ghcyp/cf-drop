@@ -73,7 +73,7 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
               Copy Message
             </div>
 
-            <div className="popover-content bg-white min-w-full">
+            <div className="popover-content bg-white min-w-full b-b b-b-gray-2 b-b-solid">
               <a
                 className={`${actionLink} py-2`}
                 target="_blank"

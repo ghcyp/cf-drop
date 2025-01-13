@@ -29,6 +29,11 @@ button {
   @apply bg-brand hover:bg-brand-4 disabled:bg-brand-3 text-white rounded-md border-0 transition-colors;
   @apply flex items-center justify-center gap-1 px-4 py-2;
 
+  &.btn-gray {
+    @apply bg-coolGray-5 hover:bg-coolGray-4 disabled:bg-coolGray-3;
+    @apply focus:ring-coolGray-4 focus:outline-coolGray-6;
+  }
+
   &:not(:disabled)::after {
     content: ' ';
     position: absolute;
