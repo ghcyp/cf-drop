@@ -1,10 +1,10 @@
 import { useAtom } from 'jotai';
 import { useCallback, useState } from 'react';
-import { $password, $passwordInvalid, fetchAPI } from '../store/auth';
+import { passwordAtom, passwordInvalidAtom, fetchAPI } from '../store/auth';
 
 export const PasswordInput = () => {
-  const [visible, setVisible] = useAtom($passwordInvalid);
-  const [password, setPassword] = useAtom($password);
+  const [visible, setVisible] = useAtom(passwordInvalidAtom);
+  const [password, setPassword] = useAtom(passwordAtom);
 
   const [validating, setValidating] = useState(false);
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {

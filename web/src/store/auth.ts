@@ -1,21 +1,19 @@
 import { atom } from 'jotai';
-import { store } from './store';
+import { store } from '.';
+import { kvGet, KvKey, kvSet } from './kvdb';
 
-const passwordLocalKey = 'cf-drop-password';
-const passwordStrAtom = atom(localStorage.getItem(passwordLocalKey) || '');
+export const passwordAtom = atom('');
+export const passwordInvalidAtom = atom(false);
 
-export const $password = atom(
-  (get) => get(passwordStrAtom),
-  (_, set, newValue: string) => {
-    localStorage.setItem(passwordLocalKey, newValue);
-    set(passwordStrAtom, newValue);
-  },
-);
+const passwordInitPromise = kvGet(KvKey.Password, '').then((password) => {
+  store.set(passwordAtom, password);
+  store.sub(passwordAtom, () => { kvSet(KvKey.Password, store.get(passwordAtom)); })
+  return password;
+});
 
-export const $passwordInvalid = atom(false);
-
-export function fetchAPI(input: RequestInfo | URL, init?: RequestInit) {
-  const password = store.get($password);
+export async function fetchAPI(input: RequestInfo | URL, init?: RequestInit) {
+  await passwordInitPromise;
+  const password = store.get(passwordAtom);
   if (password) {
     init = {
       ...init,
@@ -26,13 +24,12 @@ export function fetchAPI(input: RequestInfo | URL, init?: RequestInit) {
     };
   }
 
-  return fetch(input, init).then((res) => {
-    if (res.status === 401) {
-      store.set($passwordInvalid, true);
-      throw new Error('Password required');
-    }
+  const res = await fetch(input, init);
+  if (res.status === 401) {
+    store.set(passwordInvalidAtom, true);
+    throw new Error('Password required');
+  }
 
-    store.set($passwordInvalid, false);
-    return res;
-  });
+  store.set(passwordInvalidAtom, false);
+  return res;
 }

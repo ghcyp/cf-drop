@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'jotai';
-import { store } from './store/store';
+import { store } from './store';
 import App from './App';
 import 'uno.css';
 import './sw-client';

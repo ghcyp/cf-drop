@@ -2,12 +2,17 @@ import { useState } from 'react';
 import './App.scss';
 import { ContentInput } from './components/ContentInput';
 import { UploadRecords } from './components/UploadRecords';
-import { $password } from './store/auth';
-import { store } from './store/store';
+import { passwordAtom } from './store/auth';
+import { store } from './store';
 import { PasswordInput } from './components/PasswordInput';
+import { useAtom } from 'jotai';
+import { inputFilesAtom, inputTextAtom } from './store/input';
 
 const App = () => {
   const [progress, setProgress] = useState(0);
+  const [text, setText] = useAtom(inputTextAtom);
+  const [files, setFiles] = useAtom(inputFilesAtom);
+
   function startUpload(text: string, files: File[]) {
     return new Promise<void>((resolve, reject) => {
       const body = new FormData();
@@ -18,7 +23,7 @@ const App = () => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
       xhr.setRequestHeader('x-uploader', 'yon');
-      xhr.setRequestHeader('x-password', store.get($password));
+      xhr.setRequestHeader('x-password', store.get(passwordAtom));
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -34,6 +39,8 @@ const App = () => {
           // const data = JSON.parse(xhr.responseText);
           setProgress(0);
           window.dispatchEvent(new Event('records-updated'));
+          setText('');
+          setFiles([]);
           resolve();
           return;
         }
@@ -52,7 +59,7 @@ const App = () => {
 
   return (
     <div className="bg-gray-2 h-vh flex flex-col">
-      <ContentInput onSend={startUpload} />
+      <ContentInput onSend={startUpload} files={files} text={text} onFilesChange={setFiles} onTextChange={setText} />
       <SimpleProgressBar progress={progress} />
       <div className="flex-1 overflow-auto">
         <UploadRecords />

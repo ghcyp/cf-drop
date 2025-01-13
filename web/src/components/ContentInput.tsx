@@ -1,15 +1,19 @@
-import { memo, useEffect, useRef, useState } from 'react';
-import { useConsistCallback } from '../hooks/useConsistCallback';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useConsistCallback } from '../utils/useConsistCallback';
+import { isEqual } from '../utils/isEqual';
+import { createThumbnail } from '../utils/createThumbnail';
 
 interface Props {
+  text?: string;
+  files?: File[];
   onTextChange?: (text: string) => void;
   onFilesChange?: (files: File[]) => void;
   onSend?: (text: string, files: File[]) => Promise<any>;
 }
 
 export const ContentInput = memo<Props>((props) => {
-  const [files, setFiles] = useState<File[]>([]);
-  const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>(props.files?.slice() ?? []);
+  const [text, setText] = useState(props.text ?? '');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleFilesChange = useConsistCallback((cb: (files: File[]) => File[]) => {
@@ -27,9 +31,7 @@ export const ContentInput = memo<Props>((props) => {
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
       if (totalSize > 0 && totalSize < 10e6 && !text) {
         // Send if files are uploaded and total size is less than 10MB
-        Promise.resolve(props.onSend?.(text, files)).then(() => {
-          setFiles([]);
-        });
+        props.onSend?.(text, files)
       }
     }, 0);
   });
@@ -139,11 +141,11 @@ export const ContentInput = memo<Props>((props) => {
   });
 
   const handleSend = useConsistCallback(() => {
-    Promise.resolve(props.onSend?.(text, files)).then(() => {
-      setFiles([]);
-      setText('');
-    });
+    props.onSend?.(text, files)
   });
+
+  useEffect(() => { if (props.text !== undefined && props.text !== text) setText(props.text); }, [props.text]);
+  useEffect(() => { if (props.files !== undefined && !isEqual(props.files, files)) setFiles(props.files); }, [props.files]);
 
   return (
     <div
@@ -175,22 +177,7 @@ export const ContentInput = memo<Props>((props) => {
           Add file
         </button>
 
-        {files.map((file, index) => (
-          <div key={index} className="bg-brand-4 text-white rounded-md flex items-center text-sm overflow-hidden">
-            {file.thumbnail ? (
-              <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
-            ) : (
-              <div className="pl-3" />
-            )}
-            <span className="truncate max-w-48">{file.name}</span>
-            <button
-              onClick={() => removeFile(index)}
-              className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3"
-            >
-              <i className="i-mdi-close"></i>
-            </button>
-          </div>
-        ))}
+        {files.map((file, index) => <UploadedFileItem file={file} index={index} removeFile={removeFile} key={index} />)}
       </div>
 
       {!!isDragOver && (
@@ -211,27 +198,44 @@ declare global {
   }
 }
 
+function UploadedFileItem({ index, file, removeFile }: { index: number; file: File; removeFile: (index: number) => void; }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return <div key={index} className="bg-brand-4 text-white rounded-md flex items-center text-sm overflow-hidden">
+    {file.thumbnail ? (
+      <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
+    ) : (
+      <div className="pl-3" />
+    )}
+    <a
+      download={file.name}
+      href={url}
+      title={file.name}
+      className="truncate max-w-48 text-inherit decoration-none hover:decoration-underline">{file.name}</a>
+    <button
+      onClick={() => removeFile(index)}
+      className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3"
+    >
+      <i className="i-mdi-close"></i>
+    </button>
+  </div>;
+}
+
 export async function addThumbnail(file: File) {
   if (!file.type.startsWith('image/')) return false;
   if (file.thumbnail) return false; // already has thumbnail
 
   const url = URL.createObjectURL(file);
-  const canvas = document.createElement('canvas');
-  canvas.width = 200;
-  canvas.height = 200;
-
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
-
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const thumbnail = canvas.toDataURL('image/jpeg', 0.8);
-  file.thumbnail = thumbnail;
+  try {
+    file.thumbnail = await createThumbnail(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 
   return true;
 }
