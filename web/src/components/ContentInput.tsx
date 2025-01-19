@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useConsistCallback } from '../utils/useConsistCallback';
 import { isEqual } from '../utils/isEqual';
 import { createThumbnail } from '../utils/createThumbnail';
+import { getFilesFromDataTransferItem } from '../utils/fileEntry';
 
 interface Props {
   text?: string;
@@ -105,10 +106,13 @@ export const ContentInput = memo<Props>((props) => {
       e.preventDefault();
       e.stopPropagation();
 
-      const droppedFiles = Array.from(e.dataTransfer!.files);
-      if (droppedFiles.length) {
-        handleFilesChange((prev) => [...prev, ...droppedFiles]);
-      }
+      const promises = Array.from(e.dataTransfer?.items || [], getFilesFromDataTransferItem)
+      Promise.all(promises).then((files) => {
+        const droppedFiles = ([] as File[]).concat(...files);
+        if (droppedFiles.length) {
+          handleFilesChange((prev) => [...prev, ...droppedFiles]);
+        }
+      });
     };
 
     window.addEventListener('drop', handleDrop, true);
@@ -184,7 +188,7 @@ export const ContentInput = memo<Props>((props) => {
           Add file
         </button>
 
-        {files.map((file, index) => <UploadedFileItem file={file} index={index} removeFile={removeFile} key={index} />)}
+        {files.map((file, index) => <AttachedFileItem file={file} index={index} removeFile={removeFile} key={index} />)}
 
         <button onClick={doClear} className='btn-gray' key='clearBtn'>
           Clear
@@ -209,7 +213,7 @@ declare global {
   }
 }
 
-function UploadedFileItem({ index, file, removeFile }: { index: number; file: File; removeFile: (index: number) => void; }) {
+function AttachedFileItem({ index, file, removeFile }: { index: number; file: File; removeFile: (index: number) => void; }) {
   const [url, setUrl] = useState<string>();
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -250,3 +254,4 @@ export async function addThumbnail(file: File) {
 
   return true;
 }
+
