@@ -1,8 +1,8 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useConsistCallback } from '../utils/useConsistCallback';
 import { isEqual } from '../utils/isEqual';
 import { createThumbnail } from '../utils/createThumbnail';
-import { getFilesFromDataTransferItem } from '../utils/fileEntry';
+import { getFilesFromDataTransfer } from '../utils/fileEntry';
 
 interface Props {
   text?: string;
@@ -41,10 +41,11 @@ export const ContentInput = memo<Props>((props) => {
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       // Handle pasted files
-      const pastedFiles = Array.from(e.clipboardData?.files ?? []);
-      if (pastedFiles.length) {
-        handleFilesChange((prev) => [...prev, ...pastedFiles]);
-      }
+      getFilesFromDataTransfer(e.clipboardData).then((pastedFiles) => {
+        if (pastedFiles.length) {
+          handleFilesChange((prev) => [...prev, ...pastedFiles]);
+        }
+      });
 
       // Handle pasted text
       const pastedText = e.clipboardData?.getData('text/plain');
@@ -106,9 +107,7 @@ export const ContentInput = memo<Props>((props) => {
       e.preventDefault();
       e.stopPropagation();
 
-      const promises = Array.from(e.dataTransfer?.items || [], getFilesFromDataTransferItem)
-      Promise.all(promises).then((files) => {
-        const droppedFiles = ([] as File[]).concat(...files);
+      getFilesFromDataTransfer(e.dataTransfer).then((droppedFiles) => {
         if (droppedFiles.length) {
           handleFilesChange((prev) => [...prev, ...droppedFiles]);
         }

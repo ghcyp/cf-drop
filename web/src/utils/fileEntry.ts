@@ -1,3 +1,15 @@
+export async function getFilesFromDataTransfer(dataTransfer?: DataTransfer | null): Promise<File[]> {
+  if (!dataTransfer) return [];
+
+  const items = Array.from(dataTransfer.items || []);
+  const files: File[] = [];
+  for (const item of items) {
+    const file = await getFilesFromDataTransferItem(item);
+    files.push(...file);
+  }
+  return files;
+}
+
 export async function getFilesFromDataTransferItem(item: DataTransferItem) {
   const entry = item.webkitGetAsEntry?.();
   const allFiles: File[] = [];

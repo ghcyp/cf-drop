@@ -59,7 +59,13 @@ const App = () => {
 
   return (
     <div className="bg-gray-2 h-vh flex flex-col">
-      <ContentInput onSend={startUpload} files={files} text={text} onFilesChange={setFiles} onTextChange={setText} />
+      <ContentInput
+        onSend={startUpload}
+        files={files}
+        text={text}
+        onFilesChange={setFiles}
+        onTextChange={setText}
+      />
       <SimpleProgressBar progress={progress} />
       <div className="flex-1 overflow-auto">
         <UploadRecords />
