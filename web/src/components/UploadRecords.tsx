@@ -93,6 +93,21 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
           </div>
         )}
 
+        {
+          props.record.files.length > 1 && (
+            <a
+              className={`${actionLink}`}
+              target="_blank"
+              rel="noreferrer"
+              href={`/api/download/${encodeURIComponent(props.record.slug)}/tarball`}
+              download={`${props.record.id}.tar`}
+            >
+              <i className="i-mdi-download mr-1"></i>
+              As Tarball
+            </a>
+          )
+        }
+
         <span className={`${actionLink} hover:text-red`} onClick={() => deleteRecord(props.record.id)}>
           <i className="i-mdi-trash mr-1"></i>
           Delete

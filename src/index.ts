@@ -8,6 +8,8 @@ import {
   purgeRecordsBeforeId,
 } from "./database";
 import { H } from "hono/types";
+import { createSeekableTarball } from "./stream-tarball";
+import { generateContentRangeHeader } from "./file";
 
 type Bindings = {
   ASSETS: { fetch: typeof fetch };
@@ -91,6 +93,47 @@ app.get("/api/download/:slug/message", async (c) => {
   return c.text(record.message);
 })
 
+app.get("/api/download/:slug/tarball", async (c) => {
+  const slug = c.req.param("slug");
+  const record = await getUploadRecordBySlug(c.env.DB, slug);
+  if (!record) return c.status(404);
+
+  const tarball = createSeekableTarball(record.files.map(f => ({
+    mtime: record.ctime,
+    name: f.name,
+    size: f.size,
+    read: async (iOffset, iLength) => {
+      const x = await c.env.MY_BUCKET.get(f.path, { range: { offset: iOffset, length: iLength } });
+      if (!x) throw new Error('File not found');
+
+      let offset = 0;
+      let length = x.size;
+
+      if (x.range && 'offset' in x.range) {
+        offset = x.range.offset!;
+        length = x.range.length!;
+      }
+
+      return {
+        stream: x.body,
+        offset,
+        length,
+      };
+    }
+  })));
+
+  const reqRange = c.req.header("range");
+  const reader = tarball.getReader(reqRange);
+
+  c.status(reqRange ? 206 : 200);
+  c.header("Content-Type", "application/octet-stream");
+  c.header("Content-Disposition", `attachment; filename="${record.slug}.tar"`);
+  c.header("Accept-Ranges", "bytes");
+  c.header("Content-Length", String(reader.end - reader.start + 1));
+  if (reqRange) c.header("Content-Range", `${reader.start}-${reader.end}/${tarball.size}`);
+
+  return c.body(reader.stream);
+})
 
 const RE_ASSET_SUFFIX = /\.(jpg|png|gif|avif|mp4|mov|txt|html|js|css|json|ya?ml)/;
 app.get("/api/download/:slug/:index", async (c) => {
