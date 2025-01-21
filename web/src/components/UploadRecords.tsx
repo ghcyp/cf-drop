@@ -47,109 +47,108 @@ export const UploadRecords = memo<Props>((props) => {
 const UploadRecordItem = memo((props: { record: UploadRecord }) => {
   const files = useMemo(() => props.record.files || [], [props.record.files]);
 
-  const actionLink = 'cursor-pointer hover:text-black text-inherit decoration-none';
+  const actionLink = 'cursor-pointer p-2 m--2 text-inherit decoration-none hover:text-brand-6 hover:bg-brand-1 rounded-lg';
+
+  const meta = <div className="flex gap-2 p-2 text-xs text-gray">
+    <span>
+      <i className="i-mdi-user mr-1"></i>
+      {props.record.uploader}
+    </span>
+    <span title={dayjs(props.record.ctime).format('YYYY-MM-DD HH:mm:ss')}>
+      <i className="i-mdi-clock mr-1"></i>
+      {dayjs(props.record.ctime).fromNow()}
+    </span>
+    {!!props.record.size && (
+      <span title={`${props.record.size} bytes`}>
+        <i className="i-mdi-database mr-1"></i>
+        {toReadableSize(props.record.size)}
+      </span>
+    )}
+  </div>
+
+  const actions = <div className="flex gap-4 p-2 b-t b-t-gray-2 b-t-solid justify-end text-gray-7 text-sm leading-none">
+    {!!props.record.message && (<>
+      <a className={actionLink} onClick={(e) => (e.preventDefault(), copyToClipboard(props.record.message))} href='#' role='button'>
+        <i className="i-mdi-clipboard mr-1"></i>
+        Copy Text
+      </a>
+
+      <a
+        className={actionLink}
+        target="_blank"
+        rel="noreferrer"
+        href={`/api/download/${encodeURIComponent(props.record.slug)}/message`}
+        download={`${props.record.id}.txt`}
+      >
+        <i className="i-mdi-file-outline mr-1"></i>
+        Text File
+      </a>
+    </>)}
+
+    {
+      props.record.files.length > 1 && (
+        <a
+          className={`${actionLink}`}
+          target="_blank"
+          rel="noreferrer"
+          href={`/api/download/${encodeURIComponent(props.record.slug)}/tarball`}
+          download={`${props.record.id}.tar`}
+        >
+          <i className="i-mdi-archive-outline mr-1"></i>
+          Download All
+        </a>
+      )
+    }
+
+    <a className={`${actionLink} hover:text-red`} onClick={(e) => (e.preventDefault(), deleteRecord(props.record.id))} href='#' role='button'>
+      <i className="i-mdi-trash mr-1"></i>
+      Delete
+    </a>
+  </div>  
 
   return (
-    <div className="p-4 rounded-lg bg-white shadow mb-2">
-      <div className="flex gap-4 text-sm text-gray flex-wrap">
-        <span>
-          <i className="i-mdi-user mr-1"></i>
-          {props.record.uploader}
-        </span>
-        <span title={dayjs(props.record.ctime).format('YYYY-MM-DD HH:mm:ss')}>
-          <i className="i-mdi-clock mr-1"></i>
-          {dayjs(props.record.ctime).fromNow()}
-        </span>
-        {!!props.record.size && (
-          <span title={`${props.record.size} bytes`}>
-            <i className="i-mdi-database mr-1"></i>
-            {toReadableSize(props.record.size)}
-          </span>
-        )}
+    <div className="rounded-lg bg-white shadow mb-2">
+      <div className='max-h-sm overflow-auto'>
+        {meta}
+        {!!props.record.message && <pre className="ws-pre-wrap m-0 p-4 py-2 text-sm">{props.record.message}</pre>}
 
-        <div className="mr-a">
-          <br />
-        </div>
-
-        {!!props.record.message && (
-          <div className="popover-container">
-            <div className={actionLink} onClick={() => copyToClipboard(props.record.message)}>
-              <i className="i-mdi-clipboard mr-1"></i>
-              Copy Message
-            </div>
-
-            <div className="popover-content bg-white min-w-full b-b b-b-gray-2 b-b-solid">
-              <a
-                className={`${actionLink} py-2`}
-                target="_blank"
-                rel="noreferrer"
-                href={`/api/download/${encodeURIComponent(props.record.slug)}/message`}
-                download={`${props.record.id}.txt`}
-              >
-                <i className="i-mdi-download mr-1"></i>
-                As File
-              </a>
-            </div>
+        {files.length > 0 && (
+          <div className="flex flex-wrap m-2 mt-0">
+            {files.map((file, index) => {
+              const link = `/api/download/${props.record.slug}/${index}`;
+              return (
+                <div key={file.path} className="flex gap-2 max-w-sm min-w-0">
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={file.name}
+                    className="flex gap-2 items-center decoration-none text-brand-6 hover:bg-brand-1 rounded p-2 min-w-0"
+                  >
+                    {file.thumbnail ? (
+                      <>
+                        <img src={file.thumbnail} className="w-16 h-16 rounded-md mr-1" />
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="min-w-0 truncate">{file.name}</span>
+                          <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <i className="i-mdi-file-outline"></i>
+                        <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                        <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
+                      </>
+                    )}
+                  </a>
+                </div>
+              );
+            })}
           </div>
         )}
-
-        {
-          props.record.files.length > 1 && (
-            <a
-              className={`${actionLink}`}
-              target="_blank"
-              rel="noreferrer"
-              href={`/api/download/${encodeURIComponent(props.record.slug)}/tarball`}
-              download={`${props.record.id}.tar`}
-            >
-              <i className="i-mdi-download mr-1"></i>
-              As Tarball
-            </a>
-          )
-        }
-
-        <span className={`${actionLink} hover:text-red`} onClick={() => deleteRecord(props.record.id)}>
-          <i className="i-mdi-trash mr-1"></i>
-          Delete
-        </span>
       </div>
 
-      <pre className="max-h-md overflow-auto ws-pre-wrap">{props.record.message}</pre>
-
-      {files.length > 0 && (
-        <div className="flex flex-wrap m--2">
-          {files.map((file, index) => {
-            const link = `/api/download/${props.record.slug}/${index}`;
-            return (
-              <div key={file.path} className="flex gap-2 p-2 max-w-sm min-w-0">
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={file.name}
-                  className="flex gap-2 items-center decoration-none text-brand-6 hover:bg-brand-1 rounded p-2 min-w-0"
-                >
-                  {file.thumbnail ? (
-                    <>
-                      <img src={file.thumbnail} className="w-16 h-16 rounded-md mr-1" />
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <span className="min-w-0 truncate">{file.name}</span>
-                        <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <i className="i-mdi-file-outline"></i>
-                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                      <span className="text-sm text-gray">{toReadableSize(file.size)}</span>
-                    </>
-                  )}
-                </a>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {actions}
     </div>
   );
 });

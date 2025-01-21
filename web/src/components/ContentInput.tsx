@@ -172,7 +172,7 @@ export const ContentInput = memo<Props>((props) => {
           ref={textAreaRef}
           value={text}
           onChange={handleTextChange}
-          className="w-full p-2 border-0 resize-y flex-1 outline-0 h-20 min-h-10"
+          className="w-full p-2 border-0 resize-y flex-1 outline-0 h-20 min-h-10 text-sm"
           placeholder="Type or paste text / files here..."
         />
 
