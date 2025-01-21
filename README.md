@@ -25,28 +25,21 @@
 
 Follow these steps to get up and running quickly:
 
-```sh
-# Prerequisites: Node.js >= 20, pnpm
+(Prerequisites: Node.js >= 20, pnpm)
 
-# Install dependencies
+```sh
 pnpm install
 
-# Create R2 bucket
 npx wrangler r2 bucket create cf-drop
-
-# Create D1 database
 npx wrangler d1 create cf-drop
 
-# ... copy the database_id to wrangler.toml
+# 📝 edit wrangler.toml
+# 1. write down the database_id
+# 2. set the password
 
-# Deploy the application
+# then...
 npm run deploy
-
-# For local development
-# npm run dev
 ```
-
-You can access the app on mobile and install it as a Progressive Web App (PWA).
 
 ## 🎨 Customize
 
@@ -55,7 +48,4 @@ Make `cf-drop` your own by customizing the following:
 - 🔑 **Set password** via `./wrangler.toml`
 - 🎨 **Change theme color** in `./web/public/manifest.json`
 - 💡 **Find `database_id`** from Cloudflare Dashboard - D1 SQL page
-
----
-
-Happy deploying! 🚀
+- **Development** - `pnpm dev`
