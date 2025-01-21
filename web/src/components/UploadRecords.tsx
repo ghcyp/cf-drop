@@ -1,9 +1,14 @@
 import { memo, useEffect, useMemo } from 'react';
 import useSWRInfinite from 'swr/infinite';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
 import type { UploadRecord } from '../../../src/database';
 import { fetchAPI } from '../store/auth';
 
-interface Props {}
+dayjs.extend(relativeTime);
+
+interface Props { }
 
 export const UploadRecords = memo<Props>((props) => {
   // all records. newest first
@@ -51,12 +56,12 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
           <i className="i-mdi-user mr-1"></i>
           {props.record.uploader}
         </span>
-        <span>
+        <span title={dayjs(props.record.ctime).format('YYYY-MM-DD HH:mm:ss')}>
           <i className="i-mdi-clock mr-1"></i>
-          {new Date(props.record.ctime).toLocaleString()}
+          {dayjs(props.record.ctime).fromNow()}
         </span>
         {!!props.record.size && (
-          <span>
+          <span title={`${props.record.size} bytes`}>
             <i className="i-mdi-database mr-1"></i>
             {toReadableSize(props.record.size)}
           </span>

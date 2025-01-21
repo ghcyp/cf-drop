@@ -84,6 +84,15 @@ app.post("/api/upload", authWithPassword, async (c) => {
   return c.json({ record });
 });
 
+app.get("/api/download/:slug/message", async (c) => {
+  const slug = c.req.param("slug");
+  const record = await getUploadRecordBySlug(c.env.DB, slug);
+  if (!record) return c.status(404);
+  return c.text(record.message);
+})
+
+
+const RE_ASSET_SUFFIX = /\.(jpg|png|gif|avif|mp4|mov|txt|html|js|css|json|ya?ml)/;
 app.get("/api/download/:slug/:index", async (c) => {
   const slug = c.req.param("slug");
   const index = c.req.param("index");
@@ -92,17 +101,13 @@ app.get("/api/download/:slug/:index", async (c) => {
     return c.status(404);
   }
 
-  if (index === "message") {
-    return c.text(record.message);
-  }
-
   const filePath = record.files[+index]?.path;
   if (!filePath) {
     return c.status(404);
   }
 
   const r = await c.env.MY_BUCKET.get(filePath, {
-    range: c.req.header("range"),
+    range: c.req.raw.headers
   });
 
   if (!r) {
@@ -112,16 +117,17 @@ app.get("/api/download/:slug/:index", async (c) => {
 
   const basename = filePath.split("/").pop()!.replace(/\?.*/, "");
   const headers = new Headers();
-  headers.set("accept-ranges", "bytes");
-
-  if (
-    !/\.(jpg|png|gif|avif|mp4|mov|txt|html|js|css|json|ya?ml)/.test(basename)
-  ) {
-    headers.set("content-disposition", `attachment; filename="${basename}"`);
-  }
 
   r.writeHttpMetadata(headers);
-  return new Response(r.body, { headers });
+  if (r.range && c.req.header('Range')) {
+    c.status(206);
+    headers.set("content-range", generateContentRangeHeader(r.range, r.size));
+  }
+  headers.set("accept-ranges", "bytes");
+
+  if (!RE_ASSET_SUFFIX.test(basename)) headers.set("content-disposition", `attachment; filename="${basename}"`);
+  headers.forEach((value, key) => c.header(key, value));
+  return c.body(r.body)
 });
 
 app.post("/api/delete", authWithPassword, async (c) => {

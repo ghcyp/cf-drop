@@ -7,20 +7,6 @@ export const configRsPack: ModifyRspackConfigFn = (config, ctx) => {
   config.experiments ??= {};
   config.experiments.css = true;
 
-  ctx.addRules({
-    test: /\.(sass|scss|css)$/,
-    exclude: /node_modules/,
-    use: [
-      {
-        loader: 'postcss-loader',
-        options: {
-          postcssOptions: {},
-        },
-      },
-    ],
-    type: 'css/auto',
-  });
-
   ctx.prependPlugins([
     new InjectManifest({
       swSrc: './src/sw.ts',
