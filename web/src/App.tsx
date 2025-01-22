@@ -15,10 +15,17 @@ const App = () => {
 
   function startUpload() {
     return new Promise<void>((resolve, reject) => {
+      const fileInfos = files.map(f => ({
+        thumbnail: f.thumbnail,
+        size: f.blob.size,
+        type: f.blob.type,
+        name: f.name,
+      }))
+
       const body = new FormData();
       body.append('message', text);
+      body.append('fileInfos', JSON.stringify(fileInfos));
       files.forEach((file) => body.append('files', file.blob));
-      files.forEach((file) => body.append('thumbnails', file.thumbnail || ''));
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
