@@ -1,5 +1,7 @@
 import { registerRoute } from 'workbox-routing';
 import { precacheAndRoute } from 'workbox-precaching';
+import KvStore from './database/kv';
+import FileStore from './database/files';
 
 declare var self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
 
@@ -21,7 +23,32 @@ registerRoute(
 
     console.log('recv', { title, text, url, files });
 
-    const resp = new Response('hello world for ' + request.url);
+    // write message to indexedDB
+    const newMessage = [
+      await KvStore.inputText.get(),
+      title,
+      text,
+      url,
+    ].filter(Boolean).join('\n\n');
+    await KvStore.inputText.set(newMessage);
+
+    // add files to indexedDB
+    for (const file of files) {
+      if (!(file instanceof File)) continue;
+      await FileStore.add({
+        name: file.name,
+        blob: file,
+        // URL.createObjectURL is not supported in service worker
+        // so we can't create thumbnail
+      });
+    }
+
+    const resp = new Response('Redirecting to /', {
+      status: 302,
+      headers: {
+        location: '/',
+      },
+    });
     return resp;
   },
   'POST',

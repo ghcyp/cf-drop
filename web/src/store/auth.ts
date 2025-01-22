@@ -1,13 +1,13 @@
 import { atom } from 'jotai';
 import { store } from '.';
-import { kvGet, KvKey, kvSet } from './kvdb';
+import KvStore from '../database/kv';
 
 export const passwordAtom = atom('');
 export const passwordInvalidAtom = atom(false);
 
-const passwordInitPromise = kvGet(KvKey.Password, '').then((password) => {
+const passwordInitPromise = KvStore.password.get().then((password) => {
   store.set(passwordAtom, password);
-  store.sub(passwordAtom, () => { kvSet(KvKey.Password, store.get(passwordAtom)); })
+  store.sub(passwordAtom, () => KvStore.password.setDebounced(store.get(passwordAtom)));
   return password;
 });
 

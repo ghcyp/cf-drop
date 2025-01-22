@@ -1,12 +1,9 @@
 export async function getFilesFromDataTransfer(dataTransfer?: DataTransfer | null): Promise<File[]> {
   if (!dataTransfer) return [];
 
-  const items = Array.from(dataTransfer.items || []);
   const files: File[] = [];
-  for (const item of items) {
-    const file = await getFilesFromDataTransferItem(item);
-    files.push(...file);
-  }
+  const parts = await Promise.all(Array.from(dataTransfer.items || []).map(getFilesFromDataTransferItem));
+  for (const part of parts) files.push(...part);
   return files;
 }
 
