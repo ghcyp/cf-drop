@@ -22,12 +22,12 @@ textarea {
   }
 }
 
-button {
+button, .btn {
   position: relative;
 
   @apply cursor-pointer disabled:cursor-default;
   @apply bg-brand hover:bg-brand-4 disabled:bg-brand-3 text-white rounded-md border-0 transition-colors;
-  @apply flex items-center justify-center gap-1 px-4 py-2;
+  @apply flex items-center justify-center gap-1 px-4 py-2 leading-none;
 
   &.btn-gray {
     @apply bg-coolGray-5 hover:bg-coolGray-4 disabled:bg-coolGray-3;

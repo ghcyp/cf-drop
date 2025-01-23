@@ -157,15 +157,15 @@ export const ContentInput = memo(() => {
           Add file
         </button>
 
+        <button onClick={doClear} className='btn-gray' key='clearBtn'>
+          Clear
+        </button>
+
         {files.map((file) => <AttachedFileItem
           key={file.id}
           file={file}
           removeFile={handleRemoveFile}
         />)}
-
-        <button onClick={doClear} className='btn-gray' key='clearBtn'>
-          Clear
-        </button>
       </div>
 
       {!!isDragOver && (
@@ -194,7 +194,7 @@ function AttachedFileItem({ file, removeFile }: { file: FileStoreItem; removeFil
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  return <div className="bg-brand-4 text-white rounded-md flex items-center text-sm overflow-hidden">
+  return <div className="btn !p-0 cursor-default">
     {file.thumbnail ? (
       <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
     ) : (

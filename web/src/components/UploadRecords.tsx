@@ -5,6 +5,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 import type { UploadRecord } from '../../../src/database';
 import { fetchAPI } from '../store/auth';
+import { PopoverConfirm } from './PopoverConfirm';
 
 dayjs.extend(relativeTime);
 
@@ -100,11 +101,15 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
       )
     }
 
-    <a className={`${actionLink} hover:text-red`} onClick={(e) => (e.preventDefault(), deleteRecord(props.record.id))} href='#' role='button'>
-      <i className="i-mdi-trash mr-1"></i>
-      Delete
-    </a>
-  </div>  
+    <PopoverConfirm onConfirm={() => deleteRecord(props.record.id)}>
+      <a
+        className={`${actionLink} hover:text-red`}
+        onClick={(e) => e.preventDefault()} href='#' role='button'>
+        <i className="i-mdi-trash mr-1"></i>
+        Delete
+      </a>
+    </PopoverConfirm>
+  </div>
 
   return (
     <div className="rounded-lg bg-white shadow mb-2">
@@ -176,7 +181,6 @@ function copyToClipboard(text: string) {
 }
 
 function deleteRecord(id: number) {
-  if (!confirm('Are you sure you want to delete this record?')) return;
   fetchAPI('/api/delete', {
     method: 'POST',
     headers: {
