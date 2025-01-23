@@ -27,7 +27,7 @@ export const UploadRecords = memo<Props>((props) => {
   }, [mutate]);
 
   return (
-    <div className="p-4">
+    <div>
       {error && <div className="text-red-500 mb-4">Error: {error.message}</div>}
       {data?.map((page, i) => (
         <div key={i}>
@@ -49,7 +49,7 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
 
   const actionLink = 'cursor-pointer p-2 m--2 text-inherit decoration-none hover:text-brand-6 hover:bg-brand-1 rounded-lg';
 
-  const meta = <div className="flex gap-2 p-2 text-xs text-gray">
+  const meta = <div className="flex gap-2 mb-2 text-xs text-gray">
     <span>
       <i className="i-mdi-user mr-1"></i>
       {props.record.uploader}
@@ -108,12 +108,11 @@ const UploadRecordItem = memo((props: { record: UploadRecord }) => {
 
   return (
     <div className="rounded-lg bg-white shadow mb-2">
-      <div className='max-h-sm overflow-auto'>
+      <div className='max-h-sm withScrollbar'>
         {meta}
-        {!!props.record.message && <pre className="ws-pre-wrap m-0 p-4 py-2 text-sm">{props.record.message}</pre>}
-
+        {!!props.record.message && <pre className="ws-pre-wrap m-0 mb-2 text-sm">{props.record.message}</pre>}
         {files.length > 0 && (
-          <div className="flex flex-wrap m-2 mt-0">
+          <div className="flex flex-wrap ml--2 mb--2">
             {files.map((file, index) => {
               const link = `/api/download/${props.record.slug}/${index}`;
               return (

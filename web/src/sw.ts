@@ -7,13 +7,14 @@ declare var self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
 
 precacheAndRoute(self.__WB_MANIFEST);
 addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  const data = event.data;
+  if (data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
 registerRoute(
-  '/api/post',
+  '/api/share_target/',
   async ({ request }) => {
     const formData = await request.formData();
     const title = formData.get('title') || '';
@@ -21,7 +22,7 @@ registerRoute(
     const url = formData.get('url') || '';
     const files = formData.getAll('files') || [];
 
-    console.log('recv', { title, text, url, files });
+    console.log('from share', { title, text, url, files });
 
     // write message to indexedDB
     const newMessage = [

@@ -5,12 +5,9 @@ import { getFilesFromDataTransfer } from '../utils/fileEntry';
 import { FileStoreItem } from '../database/files';
 import { addFiles, clearFiles, inputFilesAtom, inputTextAtom, removeFile } from '../store/input';
 import { useAtom } from 'jotai';
+import { startUpload } from '../store/uploading';
 
-interface Props {
-  onSend?: () => Promise<any>;
-}
-
-export const ContentInput = memo<Props>((props) => {
+export const ContentInput = memo(() => {
   const [files] = useAtom(inputFilesAtom)
   const [text, setText] = useAtom(inputTextAtom);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,8 +110,17 @@ export const ContentInput = memo<Props>((props) => {
   });
 
   const handleSend = useConsistCallback(() => {
-    props.onSend?.()
+    startUpload();
   });
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.isComposing) {
+        startUpload();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [startUpload]);
 
   const doClear = useConsistCallback(() => {
     setText('');
@@ -124,7 +130,7 @@ export const ContentInput = memo<Props>((props) => {
   return (
     <div
       tabIndex={-1}
-      className="p-4 outline-0"
+      className="outline-0 max-h-[30vh] withScrollbar"
       onKeyDown={(e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           handleSend();
