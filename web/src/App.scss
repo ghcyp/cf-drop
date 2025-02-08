@@ -22,12 +22,12 @@ textarea {
   }
 }
 
-button {
+button, .btn {
   position: relative;
 
   @apply cursor-pointer disabled:cursor-default;
   @apply bg-brand hover:bg-brand-4 disabled:bg-brand-3 text-white rounded-md border-0 transition-colors;
-  @apply flex items-center justify-center gap-1 px-4 py-2;
+  @apply flex items-center justify-center gap-1 px-4 py-2 leading-none;
 
   &.btn-gray {
     @apply bg-coolGray-5 hover:bg-coolGray-4 disabled:bg-coolGray-3;
@@ -51,4 +51,42 @@ textarea,
 input[type='text'] {
   font-size: inherit;
   font-family: Menlo, Consolas, Roboto Mono, 'Source Code Pro', 'Courier New', Courier, monospace;
+}
+
+body {
+  --x-padding: 16px;
+  --x-scrollbar-width: 12px;
+  --x-padding-right-with-scrollbar: calc(var(--x-padding) - var(--x-scrollbar-width));
+  @media (hover: none) {
+    // touch devices
+    body {
+      // touch device's scrollbar doesn't occupy space
+      --x-padding-right-with-scrollbar: var(--x-padding);
+    }
+  }
+}
+
+.withScrollbar {
+  overflow-y: scroll;
+  padding: var(--x-padding);
+  padding-right: var(--x-padding-right-with-scrollbar);
+
+  &::-webkit-scrollbar {
+    width: var(--x-scrollbar-width);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  &:is(:hover, :focus-within) {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+    }
+  }
 }

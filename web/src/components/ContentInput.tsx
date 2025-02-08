@@ -1,51 +1,22 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { useConsistCallback } from '../utils/useConsistCallback';
-import { isEqual } from '../utils/isEqual';
 import { createThumbnail } from '../utils/createThumbnail';
 import { getFilesFromDataTransfer } from '../utils/fileEntry';
+import { FileStoreItem } from '../database/files';
+import { addFiles, clearFiles, inputFilesAtom, inputTextAtom, removeFile } from '../store/input';
+import { useAtom } from 'jotai';
+import { startUpload } from '../store/uploading';
 
-interface Props {
-  text?: string;
-  files?: File[];
-  onTextChange?: (text: string) => void;
-  onFilesChange?: (files: File[]) => void;
-  onSend?: (text: string, files: File[]) => Promise<any>;
-}
-
-export const ContentInput = memo<Props>((props) => {
-  const [files, setFiles] = useState<File[]>(props.files?.slice() ?? []);
-  const [text, setText] = useState(props.text ?? '');
+export const ContentInput = memo(() => {
+  const [files] = useAtom(inputFilesAtom)
+  const [text, setText] = useAtom(inputTextAtom);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleFilesChange = useConsistCallback((cb: (files: File[]) => File[]) => {
-    let files: File[];
-    setFiles((oldFiles) => {
-      files = cb(oldFiles.slice());
-      return files;
-    });
-
-    setTimeout(async () => {
-      const thumbnailAdded = await Promise.all(files.map(addThumbnail));
-      if (thumbnailAdded.some((added) => added)) setFiles(files.slice());
-
-      props.onFilesChange?.(files);
-      const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-      if (totalSize > 0 && totalSize < 10e6 && !text) {
-        // Send if files are uploaded and total size is less than 10MB
-        props.onSend?.(text, files)
-      }
-    }, 0);
-  });
 
   const [isDragOver, setIsDragOver] = useState(false);
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       // Handle pasted files
-      getFilesFromDataTransfer(e.clipboardData).then((pastedFiles) => {
-        if (pastedFiles.length) {
-          handleFilesChange((prev) => [...prev, ...pastedFiles]);
-        }
-      });
+      getFilesFromDataTransfer(e.clipboardData).then((droppedFiles) => addFiles(droppedFiles));
 
       // Handle pasted text
       const pastedText = e.clipboardData?.getData('text/plain');
@@ -107,11 +78,7 @@ export const ContentInput = memo<Props>((props) => {
       e.preventDefault();
       e.stopPropagation();
 
-      getFilesFromDataTransfer(e.dataTransfer).then((droppedFiles) => {
-        if (droppedFiles.length) {
-          handleFilesChange((prev) => [...prev, ...droppedFiles]);
-        }
-      });
+      getFilesFromDataTransfer(e.dataTransfer).then((droppedFiles) => addFiles(droppedFiles));
     };
 
     window.addEventListener('drop', handleDrop, true);
@@ -123,44 +90,47 @@ export const ContentInput = memo<Props>((props) => {
     };
   }, [isDragOver]);
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = useConsistCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
-    props.onTextChange?.(e.target.value);
-  };
+  });
 
-  const openFilePicker = () => {
+  const openFilePicker = useConsistCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
     input.click();
     input.onchange = (e: any) => {
       const files = Array.from(e.target.files) as File[];
-      handleFilesChange((prev) => [...prev, ...files]);
+      addFiles(files).then(() => { input.value = '' });
     };
-  };
+  });
 
-  const removeFile = useConsistCallback((index: number) => {
-    handleFilesChange((files) => files.filter((_, i) => i !== index));
+  const handleRemoveFile = useConsistCallback((id: number) => {
+    removeFile(id);
   });
 
   const handleSend = useConsistCallback(() => {
-    props.onSend?.(text, files)
+    startUpload();
   });
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.isComposing) {
+        startUpload();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [startUpload]);
 
   const doClear = useConsistCallback(() => {
-    setFiles([]);
     setText('');
-    props.onTextChange?.('');
-    props.onFilesChange?.([]);
+    clearFiles();
   });
-
-  useEffect(() => { if (props.text !== undefined && props.text !== text) setText(props.text); }, [props.text]);
-  useEffect(() => { if (props.files !== undefined && !isEqual(props.files, files)) setFiles(props.files); }, [props.files]);
 
   return (
     <div
       tabIndex={-1}
-      className="p-4 outline-0"
+      className="outline-0 max-h-[30vh] withScrollbar"
       onKeyDown={(e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           handleSend();
@@ -187,11 +157,15 @@ export const ContentInput = memo<Props>((props) => {
           Add file
         </button>
 
-        {files.map((file, index) => <AttachedFileItem file={file} index={index} removeFile={removeFile} key={index} />)}
-
         <button onClick={doClear} className='btn-gray' key='clearBtn'>
           Clear
         </button>
+
+        {files.map((file) => <AttachedFileItem
+          key={file.id}
+          file={file}
+          removeFile={handleRemoveFile}
+        />)}
       </div>
 
       {!!isDragOver && (
@@ -212,15 +186,15 @@ declare global {
   }
 }
 
-function AttachedFileItem({ index, file, removeFile }: { index: number; file: File; removeFile: (index: number) => void; }) {
+function AttachedFileItem({ file, removeFile }: { file: FileStoreItem; removeFile: (id: number) => void; }) {
   const [url, setUrl] = useState<string>();
   useEffect(() => {
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file.blob);
     setUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  return <div key={index} className="bg-brand-4 text-white rounded-md flex items-center text-sm overflow-hidden">
+  return <div className="btn !p-0 cursor-default">
     {file.thumbnail ? (
       <img src={file.thumbnail} className="w-[2em] h-[2em] rounded-md mx-1" />
     ) : (
@@ -232,7 +206,7 @@ function AttachedFileItem({ index, file, removeFile }: { index: number; file: Fi
       title={file.name}
       className="truncate max-w-48 text-inherit decoration-none hover:decoration-underline">{file.name}</a>
     <button
-      onClick={() => removeFile(index)}
+      onClick={() => removeFile(file.id)}
       className="text-white hover:bg-red-400 transition-colors border-0 bg-transparent flex items-center self-stretch px-3"
     >
       <i className="i-mdi-close"></i>
@@ -253,4 +227,3 @@ export async function addThumbnail(file: File) {
 
   return true;
 }
-

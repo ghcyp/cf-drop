@@ -29,6 +29,7 @@ export interface RecordFileItem {
   size: number;
   path: string;
   thumbnail?: string;
+  type?: string;
 }
 
 function fromDB(data: any): UploadRecord {

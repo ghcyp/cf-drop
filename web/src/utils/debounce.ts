@@ -1,24 +1,31 @@
-export function debounce(fn: () => void, delay = 1000) {
+/**
+ * make a debounced function. last args will apply
+ */
+export function debounce<T extends any[]>(fn: (...args: T) => void, delay = 1000) {
   let timeout: number | undefined;
-  const debounced = () => {
+  let finalArgs: T | undefined;
+
+  const reset = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = undefined;
+      finalArgs = undefined;
+    }
+  };
+
+  const flush = () => {
+    if (!timeout) return;
+    const args = finalArgs!;
+    reset();
+    return fn(...args);
+  };
+
+  const debounced = (...args: T) => {
     if (timeout) clearTimeout(timeout);
-    timeout = window.setTimeout(() => {
-      timeout = undefined;
-      fn();
-    }, delay);
+    finalArgs = args;
+    timeout = window.setTimeout(flush, delay);
   };
-  debounced.cancel = () => {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = undefined;
-    }
-  };
-  debounced.flush = () => {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = undefined;
-    }
-    fn();
-  };
+  debounced.cancel = reset;
+  debounced.flush = flush;
   return debounced;
 }

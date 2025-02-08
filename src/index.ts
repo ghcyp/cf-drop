@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+// import { parseMultipartRequest } from '@mjackson/multipart-parser';
 import {
   createUploadRecord,
   deleteRecord,
@@ -6,6 +7,7 @@ import {
   getUploadRecordBySlug,
   migrateTables,
   purgeRecordsBeforeId,
+  RecordFileItem,
 } from "./database";
 import { H } from "hono/types";
 import { createSeekableTarball } from "./stream-tarball";
@@ -45,45 +47,165 @@ app.get("/api/list", authWithPassword, async (c) => {
   // return c.json(r)
 });
 
-app.post("/api/upload", authWithPassword, async (c) => {
+const timingMiddleware: H = async (c, next) => {
+  const start = Date.now();
+  const resp = await next();
+  console.log(`[${c.req.method}] ${c.req.url} ${Date.now() - start}ms`);
+  return resp;
+};
+
+app.post("/api/upload", timingMiddleware, authWithPassword, async (c) => {
+  const reqContentType = String(c.req.header('Content-Type'));
   const uploader = c.req.header("x-uploader") || "unknown";
-  const body = await c.req.formData();
+  const filePathPrefix = `cf_drop/${Date.now()}`;
 
-  const files = body.getAll("files").filter((file) => file instanceof File);
-  const thumbnails = body.getAll("thumbnails") as string[];
-  const message = String(body.get("message") || "");
+  let message = '';
+  let fileInfos: RecordFileItem[] = [];
 
-  if (!files.length && !message) {
-    return c.json({ error: "No files or message" });
+  const rollbacks: (() => void)[] = [];
+  const filePutPromises: Promise<void>[] = [];
+  const errors: { error: Error, fileInfo: RecordFileItem }[] = [];
+
+  try {
+    if (false && reqContentType.startsWith('multipart/form-data')) {
+      // stream upload -- kinda slower than native formData() parser
+
+      /*
+      const fields = parseMultipartRequest(c.req.raw);
+      for await (const field of fields) {
+        switch (field.name) {
+          case 'message':
+            message = await field.text();
+            break;
+          case 'fileInfos':
+            initializeFileInfos(JSON.parse(await field.text()));
+            break;
+          case 'files': {
+            const info = fileInfos[filePutPromises.length];
+            if (info) {
+              let stopped = false;
+              let readLength = 0;
+              let reader = field.body.getReader();
+              const stream = new ReadableStream({
+                expectedLength: info.size,
+                cancel(reason) {
+                  stopped = true;
+                  reader.cancel(reason);
+                },
+                async start(controller) {
+                  while (!stopped) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                      controller.close();
+                      break;
+                    }
+
+                    readLength += value.length;
+                    const remaining = info.size - readLength;
+                    if (remaining <= 0) {
+                      controller.enqueue(remaining !== 0 ? value.subarray(0, remaining) : value);
+                      controller.close();
+                      reader.cancel();
+                      stopped = true;
+                      break;
+                    }
+                    controller.enqueue(value);
+                  }
+                }
+              })
+              queueNextFileToUpload(stream);
+            }
+            break;
+          }
+        }
+      }
+      */
+    } else {
+      // native formData() parser
+      const body = await c.req.formData();
+      message = String(body.get("message") || "");
+      initializeFileInfos(JSON.parse(body.get("fileInfos")!.toString()));
+      body.getAll("files").forEach((file) => {
+        if (file instanceof File) queueNextFileToUpload(file);
+      });
+    }
+
+    if (!fileInfos.length && !message) {
+      return c.json({ error: "No files or message" });
+    }
+
+    // create record
+    await Promise.all(filePutPromises);
+
+    if (filePutPromises.length !== fileInfos.length) {
+      throw new Error('Invalid fileInfos');
+    }
+
+    if (errors.length) {
+      rollbacks.forEach((fn) => fn());
+      c.status(500);
+      return c.json({
+        message: 'Failed to upload files',
+        errors: errors.map(it => ({
+          error: String(it.error),
+          file: it.fileInfo.name,
+        })),
+      });
+    }
+
+    const record = await createUploadRecord(c.env.DB, {
+      uploader,
+      size: fileInfos.reduce((acc, file) => acc + file.size, 0),
+      files: fileInfos,
+      message,
+    });
+
+    return c.json({ record });
+  } catch (err) {
+    rollbacks.forEach((fn) => fn());
+    c.status(500);
+    return c.json({
+      message: 'Failed to upload files',
+      errors: [{ error: String(err), file: '' }],
+    });
   }
 
   // upload files to bucket
-  const filePathPrefix = `cf_drop/${Date.now()}`;
-  const uploadedFiles = await Promise.all(
-    files.map(async (file, index) => {
-      const fileName = file.name;
-      const filePath = `${filePathPrefix}/${fileName}`;
-      const r = await c.env.MY_BUCKET.put(filePath, file, {
-        httpMetadata: { contentType: file.type },
+  function queueNextFileToUpload(body: ReadableStream | Blob) {
+    const index = filePutPromises.length;
+    const item = fileInfos[index];
+    if (!item) throw new Error('Invalid index of file');
+
+    const { path, type } = item;
+    const rollback = () => c.env.MY_BUCKET.delete(path).catch(() => { });
+    rollbacks.push(rollback);
+
+    filePutPromises.push((async () => {
+      try {
+        const r = await c.env.MY_BUCKET.put(path, body, {
+          httpMetadata: { contentType: type },
+        })
+        item.size = r.size;
+      } catch (e) {
+        errors.push({ error: e as Error, fileInfo: item });
+      }
+    })());
+  }
+
+  function initializeFileInfos(tmp: any) {
+    if (!Array.isArray(tmp)) throw new Error('Invalid fileInfos');
+
+    fileInfos.length = 0;
+    for (const file of tmp) {
+      fileInfos.push({
+        name: String(file.name),
+        size: +file.size,
+        thumbnail: String(file.thumbnail || ''),
+        path: `${filePathPrefix}/${fileInfos.length}_${file.name}`,
+        type: String(file.type || 'application/octet-stream'),
       });
-      return {
-        name: fileName,
-        path: filePath,
-        size: r.size,
-        thumbnail: thumbnails[index] || "",
-      };
-    })
-  );
-
-  // create record
-  const record = await createUploadRecord(c.env.DB, {
-    uploader,
-    size: uploadedFiles.reduce((acc, file) => acc + file.size, 0),
-    files: uploadedFiles,
-    message,
-  });
-
-  return c.json({ record });
+    }
+  }
 });
 
 app.get("/api/download/:slug/message", async (c) => {
