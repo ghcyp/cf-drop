@@ -25,6 +25,11 @@ export async function getFilesFromDataTransferItem(item: DataTransferItem) {
     return allFiles;
   }
 
+  if (!entry && item.kind === 'file') {
+    const file = item.getAsFile()
+    if (file) return [file];
+  }  
+
   return [];
 }
 
